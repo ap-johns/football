@@ -12,7 +12,8 @@
  *   search-emails                  Search recent group emails
  *   get-thread <threadId>          Fetch full email thread
  *   read-headers                   Find column positions for sessions
- *   copy-columns                   Copy blank template columns for next week
+ *   copy-columns                   Copy template columns for next week (auto-clears stale Played/Collected)
+ *   clear-week                     Clear Played + Collected for current week's column (rows 10-40)
  *   write-played <row:val,...>     Write played values (e.g. "10:1,14:1,39:2")
  *   hide-old                       Hide the oldest visible session
  *   read-sessions                  Read back 2 most recent sessions for email
@@ -245,6 +246,54 @@ async function copyColumns(mode) {
     }
   );
   console.log('Columns copied OK (template for next week)');
+
+  // PASTE_NORMAL also copies values, so the new week starts with last week's
+  // Played + Collected. Refresh state pointers and clear stale data so the
+  // new column is ready for write-played. Credit column has a formula —
+  // leave it; it'll recompute from the now-blank Played/Collected.
+  await readHeaders(mode);
+  await clearWeek(mode);
+}
+
+async function clearWeek(mode) {
+  const { spreadsheetId } = CONFIG[mode];
+  const state = loadState();
+  const { sess2Col } = state[mode] || {};
+  if (sess2Col === undefined) throw new Error('Run read-headers first');
+
+  // Slush Fund row holds a formula in Played + Collected — must not be cleared.
+  // Find it dynamically so the script is resilient to row reordering.
+  const namesResp = await gFetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Credit!A10:A40`
+  );
+  const slushIdx = (namesResp.values || []).findIndex(r => /slush fund/i.test(r[0] || ''));
+  const slushRow = slushIdx >= 0 ? slushIdx + 10 : null;
+
+  // Build row ranges 10..40, splitting around Slush Fund row if present.
+  const rowRanges = slushRow
+    ? [[10, slushRow - 1], [slushRow + 1, 40]].filter(([a, b]) => a <= b)
+    : [[10, 40]];
+
+  const playedCol = colIdx2Letter(sess2Col);
+  const collectedCol = colIdx2Letter(sess2Col + 1);
+  const ranges = [];
+  for (const [a, b] of rowRanges) {
+    ranges.push(`Credit!${playedCol}${a}:${playedCol}${b}`);
+    ranges.push(`Credit!${collectedCol}${a}:${collectedCol}${b}`);
+  }
+
+  await gFetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchClear`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ranges }),
+    }
+  );
+  console.log(
+    `Cleared Played(${playedCol}) + Collected(${collectedCol}) rows 10-40` +
+    (slushRow ? ` (skipped Slush Fund row ${slushRow})` : '')
+  );
 }
 
 async function writePlayed(mode, rowVals) {
@@ -526,7 +575,7 @@ if (!mode || !command) {
   console.log('       node footy-credit.mjs refresh-token');
   console.log('       node footy-credit.mjs update-page');
   console.log('\nCommands: refresh-token, update-page, get-players, search-emails,');
-  console.log('          get-thread <id>, read-headers, copy-columns,');
+  console.log('          get-thread <id>, read-headers, copy-columns, clear-week,');
   console.log('          write-played <r:v,...>, hide-old, read-sessions,');
   console.log('          build-email, send-preview, send-email, run-all <r:v,...>');
   process.exit(1);
@@ -545,6 +594,7 @@ try {
     case 'get-thread': await getThread(args[0]); break;
     case 'read-headers': await readHeaders(mode); break;
     case 'copy-columns': await copyColumns(mode); break;
+    case 'clear-week': await clearWeek(mode); break;
     case 'write-played': await writePlayed(mode, args[0].split(',')); break;
     case 'hide-old': await hideOld(mode); break;
     case 'read-sessions': await readSessions(mode); break;

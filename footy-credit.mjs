@@ -390,51 +390,12 @@ function buildEmail(mode) {
   if (!s) throw new Error('Run read-sessions first');
 
   const { title } = CONFIG[mode];
-  const GREEN = '#a8d5b0', PINK = '#f4b8b5';
-  const td = (content, style) => `<td style="padding:5px 8px;border:1px solid #ddd;font-family:Arial,sans-serif;font-size:13px;${style || ''}">${content}</td>`;
-
-  const titleStyle = 'background:#2a5db0;color:white;padding:8px 10px;border:1px solid #1a4da0;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;text-align:center;letter-spacing:1px;';
-  const hdrStyle = 'background:#4a86e8;color:white;padding:6px 10px;border:1px solid #3a76d8;font-family:Arial,sans-serif;font-size:13px;text-align:center;';
-  const countStyle = 'background:#3a76d8;color:white;padding:3px 8px;border:1px solid #2a66c8;font-family:Arial,sans-serif;font-size:12px;text-align:center;font-style:italic;';
-  const subStyle = 'background:#e8f0fe;padding:5px 8px;border:1px solid #ddd;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;text-align:center;';
-  const playerStyle = 'background:#4a86e8;color:white;padding:6px 10px;border:1px solid #3a76d8;font-family:Arial,sans-serif;font-size:13px;vertical-align:middle;text-align:center;';
-
-  const fmtCredit = v => {
-    if (v === '' || v === undefined || v === null) return { txt: '', bg: '#fff' };
-    const n = parseFloat(v);
-    if (isNaN(n)) return { txt: String(v), bg: '#fff' };
-    if (n < 0) return { txt: `£${n.toFixed(2)}`, bg: PINK };
-    return { txt: `£${n.toFixed(2)}`, bg: GREEN };
-  };
-
-  let tableRows = '';
-  let rowIdx = 0;
-
-  for (const r of s.rows) {
-    if (!r.name.trim() || r.name.trim() === 'Slush Fund') continue;
-    const displayName = r.name.replace(/\s*\([^)]*\)\s*$/, '').trim();
-    const bg = rowIdx % 2 === 0 ? '#fff' : '#f9f9f9';
-    const pl1 = r.s1[0], col1 = r.s1[1], cr1 = r.s1[2];
-    const pl2 = r.s2[0], col2 = r.s2[1], cr2 = r.s2[2];
-    const c1r = fmtCredit(cr1), c2r = fmtCredit(cr2);
-    const colTxt1 = (col1 === '' || col1 === undefined || col1 === 0) ? '' : '£' + parseFloat(col1).toFixed(2);
-    const colTxt2 = (col2 === '' || col2 === undefined || col2 === 0) ? '' : '£' + parseFloat(col2).toFixed(2);
-    tableRows += `<tr>${td(displayName, `background:${bg}`)}${td(pl1 == 1 ? '1' : (pl1 > 1 ? String(pl1) : ''), `background:${pl1 >= 1 ? GREEN : bg};text-align:center`)}${td(colTxt1, `background:${bg};text-align:right`)}${td(c1r.txt, `background:${c1r.bg};text-align:right`)}${td(pl2 == 1 ? '1' : (pl2 > 1 ? String(pl2) : ''), `background:${pl2 >= 1 ? GREEN : bg};text-align:center`)}${td(colTxt2, `background:${bg};text-align:right`)}${td(c2r.txt, `background:${c2r.bg};text-align:right`)}</tr>`;
-    rowIdx++;
-  }
-
-  const html =
-    `<table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;">` +
-    `<tr><th colspan="7" style="${titleStyle}">${title}</th></tr>` +
-    `<tr><th rowspan="3" style="${playerStyle}">Player</th><th colspan="3" style="${hdrStyle}">${s.date1}</th><th colspan="3" style="${hdrStyle}">${s.date2}</th></tr>` +
-    `<tr><th colspan="3" style="${countStyle}">${s.count1 ? s.count1 + ' players' : ''}</th><th colspan="3" style="${countStyle}">${s.count2 ? s.count2 + ' players' : ''}</th></tr>` +
-    `<tr>${['Pl', 'Collected', 'Credit', 'Pl', 'Collected', 'Credit'].map(h => `<th style="${subStyle}">${h}</th>`).join('')}</tr>` +
-    tableRows + `</table>`;
+  const html = buildEmailTable(s, title);
 
   state[mode] = { ...state[mode], emailHtml: html };
   saveState(state);
 
-  console.log(`Email HTML built: ${html.length} chars, ${rowIdx} player rows`);
+  console.log(`Email HTML built: ${html.length} chars`);
   return html;
 }
 
@@ -482,61 +443,278 @@ async function sendEmail(mode) {
   console.log(`Sent to ${groupEmail} — Message ID: ${result.id}`);
 }
 
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function fmtMoney(v) {
+  if (v === '' || v === undefined || v === null) return null;
+  const n = parseFloat(v);
+  if (isNaN(n)) return null;
+  return { n, txt: `£${n.toFixed(2)}` };
+}
+
+function buildPageTable(sess) {
+  let rows = '';
+  for (const r of sess.rows) {
+    const name = String(r.name || '').trim();
+    if (!name || name === 'Slush Fund') continue;
+    const display = esc(name.replace(/\s*\([^)]*\)\s*$/, '').trim());
+
+    const s1 = r.s1, s2 = r.s2;
+    const plCell = (pl, extraClass = '') => {
+      const txt = (pl === 1 || pl === '1') ? '1' : (pl > 1 ? String(pl) : '');
+      const cls = (pl >= 1 ? 'pl played' : 'pl') + (extraClass ? ' ' + extraClass : '');
+      return `<td class="${cls}">${txt}</td>`;
+    };
+    const collCell = (v) => {
+      const m = fmtMoney(v);
+      return `<td class="num mobile-hide">${m && m.n !== 0 ? m.txt : ''}</td>`;
+    };
+    const crCell = (v) => {
+      const m = fmtMoney(v);
+      if (!m) return `<td class="num"></td>`;
+      return `<td class="num ${m.n < 0 ? 'neg' : 'pos'}">${m.txt}</td>`;
+    };
+
+    // Tag session-1 cells with mobile-hide-s1 so phones only show latest session.
+    rows +=
+      `<tr>` +
+      `<td class="player">${display}</td>` +
+      `<td class="${(s1[0] >= 1 ? 'pl played' : 'pl')} mobile-hide-s1">${(s1[0] === 1 || s1[0] === '1') ? '1' : (s1[0] > 1 ? String(s1[0]) : '')}</td>` +
+      `<td class="num mobile-hide">${(() => { const m = fmtMoney(s1[1]); return m && m.n !== 0 ? m.txt : ''; })()}</td>` +
+      (() => { const m = fmtMoney(s1[2]); if (!m) return `<td class="num mobile-hide-s1"></td>`; return `<td class="num mobile-hide-s1 ${m.n < 0 ? 'neg' : 'pos'}">${m.txt}</td>`; })() +
+      plCell(s2[0], 'sep') + collCell(s2[1]) + crCell(s2[2]) +
+      `</tr>`;
+  }
+
+  return `<table class="credit-table">
+  <thead>
+    <tr class="session-row">
+      <th></th>
+      <th colspan="3" class="mobile-hide-s1">${esc(sess.date1)}<span class="count">${esc(sess.count1 || '')} players</span></th>
+      <th colspan="3" class="sep">${esc(sess.date2)}<span class="count">${esc(sess.count2 || '')} players</span></th>
+    </tr>
+    <tr class="col-row">
+      <th class="player-h">Player</th>
+      <th class="pl-h mobile-hide-s1">Pl</th><th class="mobile-hide">Collected</th><th class="mobile-hide-s1">Credit</th>
+      <th class="pl-h sep">Pl</th><th class="mobile-hide">Collected</th><th>Credit</th>
+    </tr>
+  </thead>
+  <tbody>${rows}</tbody>
+</table>`;
+}
+
+// Inline-styled table for email clients (most strip <link>/<style>).
+// Colours match the dark theme used on the public pages.
+function buildEmailTable(sess, title) {
+  const C = {
+    bg: '#1a1d22',
+    surface: '#252830',
+    surfaceRaised: '#2d3038',
+    line: '#2d3038',
+    lineSoft: '#25282f',
+    ink: '#e8e6e0',
+    inkSoft: '#a8a59c',
+    inkFaint: '#6e6c63',
+    pos: '#a3c89a',
+    neg: '#e0a78c',
+    playedBg: '#1f3a2c',
+    accent: '#d4a866',
+    sans: "'Helvetica Neue', Arial, sans-serif",
+  };
+
+  const sepBorder = `border-left:1px solid ${C.line};`;
+  const sessionThBase = `background:${C.surfaceRaised};color:${C.ink};font-weight:600;font-size:14px;padding:10px 12px;border-bottom:1px solid ${C.line};text-align:center;font-family:${C.sans};`;
+  const sessionTh = `style="${sessionThBase}"`;
+  const sessionThSep = `style="${sessionThBase}${sepBorder}"`;
+  const countSpan = `style="display:block;font-size:11px;font-weight:500;color:${C.inkSoft};margin-top:2px;letter-spacing:0.06em;text-transform:uppercase;font-family:${C.sans};"`;
+  const colThBase = `background:${C.surfaceRaised};color:${C.inkFaint};font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;padding:8px 12px;border-bottom:1px solid ${C.line};font-family:${C.sans};`;
+  const colTh = `style="${colThBase}text-align:right;"`;
+  const colThPlayer = `style="${colThBase}text-align:left;"`;
+  const colThPl = `style="${colThBase}text-align:center;"`;
+  const colThPlSep = `style="${colThBase}text-align:center;${sepBorder}"`;
+
+  const tdBase = `padding:8px 12px;border-bottom:1px solid ${C.lineSoft};font-family:${C.sans};font-size:14px;`;
+  const tdPlayer = `${tdBase}color:${C.ink};font-weight:500;text-align:left;`;
+  const tdPlBase = `${tdBase}text-align:center;color:${C.ink};`;
+  const tdPlPlayed = `${tdBase}text-align:center;color:${C.pos};font-weight:600;background:${C.playedBg};`;
+  const tdNum = `${tdBase}color:${C.inkSoft};text-align:right;`;
+  const tdNumPos = `${tdBase}color:${C.pos};text-align:right;`;
+  const tdNumNeg = `${tdBase}color:${C.neg};text-align:right;`;
+
+  let rows = '';
+  for (const r of sess.rows) {
+    const name = String(r.name || '').trim();
+    if (!name || name === 'Slush Fund') continue;
+    const display = esc(name.replace(/\s*\([^)]*\)\s*$/, '').trim());
+
+    const plCell = (pl, sep = false) => {
+      const txt = (pl === 1 || pl === '1') ? '1' : (pl > 1 ? String(pl) : '');
+      const style = (pl >= 1 ? tdPlPlayed : tdPlBase) + (sep ? sepBorder : '');
+      return `<td style="${style}">${txt}</td>`;
+    };
+    const collCell = (v) => {
+      const m = fmtMoney(v);
+      const txt = m && m.n !== 0 ? m.txt : '';
+      return `<td style="${tdNum}">${txt}</td>`;
+    };
+    const crCell = (v) => {
+      const m = fmtMoney(v);
+      if (!m) return `<td style="${tdNum}"></td>`;
+      const style = m.n < 0 ? tdNumNeg : tdNumPos;
+      return `<td style="${style}">${m.txt}</td>`;
+    };
+
+    rows +=
+      `<tr>` +
+      `<td style="${tdPlayer}">${display}</td>` +
+      plCell(r.s1[0]) + collCell(r.s1[1]) + crCell(r.s1[2]) +
+      plCell(r.s2[0], true) + collCell(r.s2[1]) + crCell(r.s2[2]) +
+      `</tr>`;
+  }
+
+  const titleBar = `<div style="background:${C.bg};color:${C.ink};font-family:${C.sans};padding:18px 16px 8px;">` +
+    `<div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${C.accent};font-weight:600;margin-bottom:4px;">Footy Credit</div>` +
+    `<div style="font-size:22px;font-weight:600;letter-spacing:-0.01em;">${esc(title)}</div>` +
+    `</div>`;
+
+  const table =
+    `<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;background:${C.surface};">` +
+    `<thead>` +
+      `<tr>` +
+        `<th ${sessionTh}></th>` +
+        `<th colspan="3" ${sessionTh}>${esc(sess.date1)}<span ${countSpan}>${esc(sess.count1 || '')} players</span></th>` +
+        `<th colspan="3" ${sessionThSep}>${esc(sess.date2)}<span ${countSpan}>${esc(sess.count2 || '')} players</span></th>` +
+      `</tr>` +
+      `<tr>` +
+        `<th ${colThPlayer}>Player</th>` +
+        `<th ${colThPl}>Pl</th><th ${colTh}>Collected</th><th ${colTh}>Credit</th>` +
+        `<th ${colThPlSep}>Pl</th><th ${colTh}>Collected</th><th ${colTh}>Credit</th>` +
+      `</tr>` +
+    `</thead>` +
+    `<tbody>${rows}</tbody>` +
+    `</table>`;
+
+  return `<div style="background:${C.bg};padding:0 0 18px;">${titleBar}${table}</div>`;
+}
+
 async function updatePage() {
-  // Build both fri + mon tables, wrap in HTML doc, write docs/index.html, commit + push.
-  async function tryBuild(m) {
+  // Build per-day pages (docs/fri/, docs/mon/) + a landing index. Commit + push.
+  async function tryFetch(m) {
     try {
-      await readHeaders(m); await readSessions(m); buildEmail(m);
-      return loadState()[m]?.emailHtml || null;
+      await readHeaders(m); await readSessions(m);
+      return loadState()[m]?.sess || null;
     } catch (e) {
       console.error(`${m}: ${e.message} — skipping`);
       return null;
     }
   }
-  const friHtml = await tryBuild('fri') || `<p><em>No Friday session data.</em></p>`;
-  const monHtml = await tryBuild('mon') || `<p><em>No Monday session data.</em></p>`;
+  const friSess = await tryFetch('fri');
+  const monSess = await tryFetch('mon');
 
   const updated = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
-  const doc = `<!doctype html>
+
+  const dayPage = (mode, title, sess) => {
+    const stylesPath = '../styles.css';
+    const friActive = mode === 'fri' ? ' class="active"' : '';
+    const monActive = mode === 'mon' ? ' class="active"' : '';
+    const body = sess
+      ? buildPageTable(sess)
+      : `<div class="empty">No session data yet.</div>`;
+    return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>${esc(title)}</title>
+<link rel="stylesheet" href="${stylesPath}">
+</head>
+<body>
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="site-title" href="../">Footy Credit</a>
+    <nav class="site-nav">
+      <a href="../mon/"${monActive}>Monday</a>
+      <a href="../fri/"${friActive}>Friday</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="hero">
+    <h1>${esc(title)}</h1>
+    <p class="tagline">Credit standings — last two sessions.</p>
+  </div>
+  ${body}
+</main>
+<footer class="site-footer">Updated ${esc(updated)}</footer>
+</body>
+</html>
+`;
+  };
+
+  const indexDoc = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Footy Credit</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 16px; background: #fafafa; color: #222; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  .updated { color: #666; font-size: 12px; margin-bottom: 18px; }
-  section { margin-bottom: 28px; overflow-x: auto; }
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<h1>Footy Credit</h1>
-<p class="updated">Updated ${updated}</p>
-<section>${friHtml}</section>
-<section>${monHtml}</section>
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="site-title" href="./">Footy Credit</a>
+    <nav class="site-nav">
+      <a href="mon/">Monday</a>
+      <a href="fri/">Friday</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="hero">
+    <h1>Footy Credit</h1>
+    <p class="tagline">Running credit for the Friday and Monday 5-a-side groups.</p>
+  </div>
+  <div class="day-grid">
+    <a class="day-card" href="mon/">
+      <span class="day-label">MON</span>
+      <span class="day-title">Monday</span>
+      <span class="day-arrow">&rarr;</span>
+    </a>
+    <a class="day-card" href="fri/">
+      <span class="day-label">FRI</span>
+      <span class="day-title">Friday</span>
+      <span class="day-arrow">&rarr;</span>
+    </a>
+  </div>
+</main>
+<footer class="site-footer">Updated ${esc(updated)}</footer>
 </body>
 </html>
 `;
 
   const docsDir = path.join(process.cwd(), 'docs');
-  fs.mkdirSync(docsDir, { recursive: true });
-  const outPath = path.join(docsDir, 'index.html');
-  fs.writeFileSync(outPath, doc);
-  // .nojekyll so GitHub Pages serves as-is.
+  fs.mkdirSync(path.join(docsDir, 'fri'), { recursive: true });
+  fs.mkdirSync(path.join(docsDir, 'mon'), { recursive: true });
+  fs.writeFileSync(path.join(docsDir, 'index.html'), indexDoc);
+  fs.writeFileSync(path.join(docsDir, 'fri', 'index.html'), dayPage('fri', 'Friday', friSess));
+  fs.writeFileSync(path.join(docsDir, 'mon', 'index.html'), dayPage('mon', 'Monday', monSess));
   fs.writeFileSync(path.join(docsDir, '.nojekyll'), '');
-  console.log(`Wrote ${outPath} (${doc.length} bytes)`);
+  console.log(`Wrote docs/index.html, docs/fri/index.html, docs/mon/index.html`);
 
   const { execSync } = await import('node:child_process');
   const sh = (cmd) => execSync(cmd, { stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
   try {
-    sh('git add docs/index.html docs/.nojekyll');
+    sh('git add docs');
     const staged = sh('git diff --cached --name-only');
     if (!staged) { console.log('No page changes to commit.'); return; }
-    sh(`git commit -m "Update credit page ${updated}"`);
+    sh(`git commit -m "Update credit pages ${updated}"`);
     sh('git push');
-    console.log('Page committed + pushed.');
+    console.log('Pages committed + pushed.');
   } catch (e) {
     console.error('Git step failed:', e.stderr?.toString() || e.message);
   }

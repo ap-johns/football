@@ -7,6 +7,7 @@
  *
  * Commands:
  *   refresh-token                  Refresh OAuth token (run first)
+ *   update-page                    Build docs/index.html (fri + mon) + git push
  *   get-players                    List player names + rows from spreadsheet col A
  *   search-emails                  Search recent group emails
  *   get-thread <threadId>          Fetch full email thread
@@ -432,6 +433,66 @@ async function sendEmail(mode) {
   console.log(`Sent to ${groupEmail} — Message ID: ${result.id}`);
 }
 
+async function updatePage() {
+  // Build both fri + mon tables, wrap in HTML doc, write docs/index.html, commit + push.
+  async function tryBuild(m) {
+    try {
+      await readHeaders(m); await readSessions(m); buildEmail(m);
+      return loadState()[m]?.emailHtml || null;
+    } catch (e) {
+      console.error(`${m}: ${e.message} — skipping`);
+      return null;
+    }
+  }
+  const friHtml = await tryBuild('fri') || `<p><em>No Friday session data.</em></p>`;
+  const monHtml = await tryBuild('mon') || `<p><em>No Monday session data.</em></p>`;
+
+  const updated = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  const doc = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Footy Credit</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 16px; background: #fafafa; color: #222; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .updated { color: #666; font-size: 12px; margin-bottom: 18px; }
+  section { margin-bottom: 28px; overflow-x: auto; }
+</style>
+</head>
+<body>
+<h1>Footy Credit</h1>
+<p class="updated">Updated ${updated}</p>
+<section>${friHtml}</section>
+<section>${monHtml}</section>
+</body>
+</html>
+`;
+
+  const docsDir = path.join(process.cwd(), 'docs');
+  fs.mkdirSync(docsDir, { recursive: true });
+  const outPath = path.join(docsDir, 'index.html');
+  fs.writeFileSync(outPath, doc);
+  // .nojekyll so GitHub Pages serves as-is.
+  fs.writeFileSync(path.join(docsDir, '.nojekyll'), '');
+  console.log(`Wrote ${outPath} (${doc.length} bytes)`);
+
+  const { execSync } = await import('node:child_process');
+  const sh = (cmd) => execSync(cmd, { stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
+  try {
+    sh('git add docs/index.html docs/.nojekyll');
+    const staged = sh('git diff --cached --name-only');
+    if (!staged) { console.log('No page changes to commit.'); return; }
+    sh(`git commit -m "Update credit page ${updated}"`);
+    sh('git push');
+    console.log('Page committed + pushed.');
+  } catch (e) {
+    console.error('Git step failed:', e.stderr?.toString() || e.message);
+  }
+}
+
 async function runAll(mode, rowVals) {
   console.log(`\n=== Running full ${mode}-credit workflow ===\n`);
   await readHeaders(mode);
@@ -442,6 +503,7 @@ async function runAll(mode, rowVals) {
   buildEmail(mode);
   await sendPreview(mode);
   await sendEmail(mode);
+  try { await updatePage(); } catch (e) { console.error('update-page failed:', e.message); }
   console.log('\n=== Done! ===');
 }
 
@@ -449,20 +511,25 @@ async function runAll(mode, rowVals) {
 
 const [,, mode, command, ...args] = process.argv;
 
-if (!mode || !command) {
-  console.log('Usage: node footy-credit.mjs <fri|mon> <command> [args...]');
-  console.log('       node footy-credit.mjs refresh-token');
-  console.log('\nCommands: refresh-token, get-players, search-emails, get-thread <id>,');
-  console.log('          read-headers, copy-columns, write-played <r:v,...>,');
-  console.log('          hide-old, read-sessions, build-email, send-preview, send-email,');
-  console.log('          run-all <r:v,...>');
-  process.exit(1);
-}
-
-// refresh-token doesn't need a mode
+// Mode-less commands handled first.
 if (mode === 'refresh-token') {
   await refreshToken();
   process.exit(0);
+}
+if (mode === 'update-page') {
+  await updatePage();
+  process.exit(0);
+}
+
+if (!mode || !command) {
+  console.log('Usage: node footy-credit.mjs <fri|mon> <command> [args...]');
+  console.log('       node footy-credit.mjs refresh-token');
+  console.log('       node footy-credit.mjs update-page');
+  console.log('\nCommands: refresh-token, update-page, get-players, search-emails,');
+  console.log('          get-thread <id>, read-headers, copy-columns,');
+  console.log('          write-played <r:v,...>, hide-old, read-sessions,');
+  console.log('          build-email, send-preview, send-email, run-all <r:v,...>');
+  process.exit(1);
 }
 
 if (!['fri', 'mon'].includes(mode)) {

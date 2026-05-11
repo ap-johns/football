@@ -239,6 +239,7 @@ a:hover { text-decoration: underline; }
   .credit-table thead tr.session-row th,
   .credit-table thead tr.col-row th,
   .credit-table tbody td { padding: 0.4rem 0.45rem; }
-  .credit-table .mobile-hide { display: none; }
+  .credit-table .mobile-hide,
+  .credit-table .mobile-hide-s1 { display: none; }
   .credit-table thead tr.session-row th .count { font-size: 10px; }
 }

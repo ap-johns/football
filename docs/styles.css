@@ -231,12 +231,14 @@ a:hover { text-decoration: underline; }
 /* Responsive */
 @media (max-width: 640px) {
   body { font-size: 15px; }
-  main { padding: 1.5rem 1rem 2.5rem; }
+  main { padding: 1.5rem 0.75rem 2.5rem; }
   .site-header { padding: 0.85rem 1rem; }
   .site-header-inner { gap: 0.5rem; }
   .site-nav { gap: 1rem; font-size: 13px; }
   .credit-table { font-size: 12.5px; }
   .credit-table thead tr.session-row th,
   .credit-table thead tr.col-row th,
-  .credit-table tbody td { padding: 0.45rem 0.5rem; }
+  .credit-table tbody td { padding: 0.4rem 0.45rem; }
+  .credit-table .mobile-hide { display: none; }
+  .credit-table thead tr.session-row th .count { font-size: 10px; }
 }

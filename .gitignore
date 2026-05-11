@@ -1,0 +1,4 @@
+/tmp/footy-credit-state.json
+*.local
+.env
+credentials.json

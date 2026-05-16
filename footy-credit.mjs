@@ -181,7 +181,7 @@ async function getThread(threadId) {
 async function readHeaders(mode) {
   const { spreadsheetId } = CONFIG[mode];
   const data = await gFetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets(properties,data(columnMetadata(hiddenByUser),rowData(values(formattedValue))))&ranges=Credit!A7:ZZ9&includeGridData=true`
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets(properties,data(columnMetadata(hiddenByUser),rowData(values(formattedValue))))&ranges=Credit!7:9&includeGridData=true`
   );
   const sheetData = data.sheets?.[0]?.data?.[0];
   const rows = sheetData?.rowData || [];
@@ -526,17 +526,17 @@ function buildEmailTable(sess, title) {
   };
 
   const sepBorder = `border-left:1px solid ${C.line};`;
-  const sessionThBase = `background:${C.surfaceRaised};color:${C.ink};font-weight:600;font-size:14px;padding:10px 12px;border-bottom:1px solid ${C.line};text-align:center;font-family:${C.sans};`;
+  const sessionThBase = `background:${C.surfaceRaised};color:${C.ink};font-weight:600;font-size:13px;padding:8px 6px;border-bottom:1px solid ${C.line};text-align:center;font-family:${C.sans};`;
   const sessionTh = `style="${sessionThBase}"`;
   const sessionThSep = `style="${sessionThBase}${sepBorder}"`;
-  const countSpan = `style="display:block;font-size:11px;font-weight:500;color:${C.inkSoft};margin-top:2px;letter-spacing:0.06em;text-transform:uppercase;font-family:${C.sans};"`;
-  const colThBase = `background:${C.surfaceRaised};color:${C.inkFaint};font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;padding:8px 12px;border-bottom:1px solid ${C.line};font-family:${C.sans};`;
+  const countSpan = `style="display:block;font-size:10px;font-weight:500;color:${C.inkSoft};margin-top:2px;letter-spacing:0.06em;text-transform:uppercase;font-family:${C.sans};"`;
+  const colThBase = `background:${C.surfaceRaised};color:${C.inkFaint};font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;padding:6px 6px;border-bottom:1px solid ${C.line};font-family:${C.sans};`;
   const colTh = `style="${colThBase}text-align:right;"`;
   const colThPlayer = `style="${colThBase}text-align:left;"`;
   const colThPl = `style="${colThBase}text-align:center;"`;
   const colThPlSep = `style="${colThBase}text-align:center;${sepBorder}"`;
 
-  const tdBase = `padding:8px 12px;border-bottom:1px solid ${C.lineSoft};font-family:${C.sans};font-size:14px;`;
+  const tdBase = `padding:6px 6px;border-bottom:1px solid ${C.lineSoft};font-family:${C.sans};font-size:13px;`;
   const tdPlayer = `${tdBase}color:${C.ink};font-weight:500;text-align:left;`;
   const tdPlBase = `${tdBase}text-align:center;color:${C.ink};`;
   const tdPlPlayed = `${tdBase}text-align:center;color:${C.pos};font-weight:600;background:${C.playedBg};`;
@@ -590,14 +590,16 @@ function buildEmailTable(sess, title) {
       `</tr>` +
       `<tr>` +
         `<th ${colThPlayer}>Player</th>` +
-        `<th ${colThPl}>Pl</th><th ${colTh}>Collected</th><th ${colTh}>Credit</th>` +
-        `<th ${colThPlSep}>Pl</th><th ${colTh}>Collected</th><th ${colTh}>Credit</th>` +
+        `<th ${colThPl}>Pl</th><th ${colTh}>Coll</th><th ${colTh}>Credit</th>` +
+        `<th ${colThPlSep}>Pl</th><th ${colTh}>Coll</th><th ${colTh}>Credit</th>` +
       `</tr>` +
     `</thead>` +
     `<tbody>${rows}</tbody>` +
     `</table>`;
 
-  return `<div style="background:${C.bg};padding:0 0 18px;">${titleBar}${table}</div>`;
+  return `<div style="background:${C.bg};padding:0 0 18px;">` +
+    `<div style="max-width:520px;margin:0 auto;">${titleBar}${table}</div>` +
+    `</div>`;
 }
 
 async function updatePage() {

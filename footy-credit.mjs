@@ -369,6 +369,8 @@ async function readSessions(mode) {
     date2: sess2Date,
     count1: String(s1.values?.[1]?.[0] || '').trim(),
     count2: String(s2.values?.[1]?.[0] || '').trim(),
+    price1: s1.values?.[1]?.[2],
+    price2: s2.values?.[1]?.[2],
     rows: (colA.values || []).slice(3).map((nameCell, i) => ({
       name: String(nameCell[0] || ''),
       s1: s1.values?.[i + 3] || [],
@@ -585,8 +587,8 @@ function buildEmailTable(sess, title) {
     `<thead>` +
       `<tr>` +
         `<th ${sessionTh}></th>` +
-        `<th colspan="3" ${sessionTh}>${esc(sess.date1)}<span ${countSpan}>${esc(sess.count1 || '')} players</span></th>` +
-        `<th colspan="3" ${sessionThSep}>${esc(sess.date2)}<span ${countSpan}>${esc(sess.count2 || '')} players</span></th>` +
+        `<th colspan="3" ${sessionTh}>${esc(sess.date1)}<span ${countSpan}>${esc(sess.count1 || '')} players${fmtMoney(sess.price1) ? ` · ${fmtMoney(sess.price1).txt} each` : ''}</span></th>` +
+        `<th colspan="3" ${sessionThSep}>${esc(sess.date2)}<span ${countSpan}>${esc(sess.count2 || '')} players${fmtMoney(sess.price2) ? ` · ${fmtMoney(sess.price2).txt} each` : ''}</span></th>` +
       `</tr>` +
       `<tr>` +
         `<th ${colThPlayer}>Player</th>` +

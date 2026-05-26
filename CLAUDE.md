@@ -43,6 +43,11 @@ Read through messages from most recent to oldest. Find the authoritative player 
 2. **John's latest running tally** — e.g. "10 js alex al steve dex mark rs michael jh ruban"
 3. **Individual replies** — build from positive replies if no tally exists
 
+**Cap the list at 10.** Only 10 play per session. If the email thread lists more than
+10 names and there are no explicit teams/colours from the organiser, take only the
+first 10 on the list and ignore the rest. Do not write the 11th+ player into the
+spreadsheet.
+
 ### 5. Match players to spreadsheet rows
 Resolve each abbreviation to a row number using the lookup from step 2.
 

@@ -84,7 +84,9 @@ automatically. No confirmation needed.
 **Friday:**
 - Spreadsheet: `1maWZi_HTOjyTbeeM3uQ2ovkFlQTCUpIcLHkvTODUAXc`
 - Group: `kkfrifooty@googlegroups.com`
-- Player rows 10-40 in column A of the "Credit" tab
+- Player rows 10-41 in column A of the "Credit" tab (Slush Fund at row 42)
+- **Guy Fisher is row 41** — a regular, added below the original 10-40 block. He
+  is NOT a guest. The script ranges read through row 42 to include him.
 
 **Monday:**
 - Spreadsheet: `11pKmY3UITJ1faNxO_Hdb9XpVGXx63pfhjuEOc4pyw4s`

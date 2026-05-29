@@ -13,7 +13,7 @@
  *   get-thread <threadId>          Fetch full email thread
  *   read-headers                   Find column positions for sessions
  *   copy-columns                   Copy template columns for next week (auto-clears stale Played/Collected)
- *   clear-week                     Clear Played + Collected for current week's column (rows 10-40)
+ *   clear-week                     Clear Played + Collected for current week's column (rows 10-42)
  *   write-played <row:val,...>     Write played values (e.g. "10:1,14:1,39:2")
  *   hide-old                       Hide the oldest visible session
  *   read-sessions                  Read back 2 most recent sessions for email
@@ -134,7 +134,7 @@ async function refreshToken() {
 async function getPlayers(mode) {
   const { spreadsheetId } = CONFIG[mode];
   const data = await gFetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Credit!A10:A40`
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Credit!A10:A42`
   );
   const players = (data.values || []).map((row, i) => ({
     row: i + 10,
@@ -264,15 +264,15 @@ async function clearWeek(mode) {
   // Slush Fund row holds a formula in Played + Collected — must not be cleared.
   // Find it dynamically so the script is resilient to row reordering.
   const namesResp = await gFetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Credit!A10:A40`
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Credit!A10:A42`
   );
   const slushIdx = (namesResp.values || []).findIndex(r => /slush fund/i.test(r[0] || ''));
   const slushRow = slushIdx >= 0 ? slushIdx + 10 : null;
 
-  // Build row ranges 10..40, splitting around Slush Fund row if present.
+  // Build row ranges 10..42, splitting around Slush Fund row if present.
   const rowRanges = slushRow
-    ? [[10, slushRow - 1], [slushRow + 1, 40]].filter(([a, b]) => a <= b)
-    : [[10, 40]];
+    ? [[10, slushRow - 1], [slushRow + 1, 42]].filter(([a, b]) => a <= b)
+    : [[10, 42]];
 
   const playedCol = colIdx2Letter(sess2Col);
   const collectedCol = colIdx2Letter(sess2Col + 1);
@@ -291,7 +291,7 @@ async function clearWeek(mode) {
     }
   );
   console.log(
-    `Cleared Played(${playedCol}) + Collected(${collectedCol}) rows 10-40` +
+    `Cleared Played(${playedCol}) + Collected(${collectedCol}) rows 10-42` +
     (slushRow ? ` (skipped Slush Fund row ${slushRow})` : '')
   );
 }
@@ -354,9 +354,9 @@ async function readSessions(mode) {
   if (sess2Col === undefined) throw new Error('Run read-headers first');
 
   const ranges = [
-    'Credit!A7:A40',
-    `Credit!${colIdx2Letter(sess1Col)}7:${colIdx2Letter(sess1Col + 2)}40`,
-    `Credit!${colIdx2Letter(sess2Col)}7:${colIdx2Letter(sess2Col + 2)}40`,
+    'Credit!A7:A42',
+    `Credit!${colIdx2Letter(sess1Col)}7:${colIdx2Letter(sess1Col + 2)}42`,
+    `Credit!${colIdx2Letter(sess2Col)}7:${colIdx2Letter(sess2Col + 2)}42`,
   ].map(r => 'ranges=' + encodeURIComponent(r)).join('&');
 
   const { valueRanges } = await gFetch(

@@ -28,6 +28,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import http from 'http';
 
 const CRED_PATH = process.env.FOOTY_CREDIT_CREDENTIALS
   ?? path.join(os.homedir(), '.config', 'footy-credit', 'credentials.json');
@@ -115,6 +116,69 @@ function getBody(part) {
 }
 
 // ─── Commands ──────────────────────────────────────────────────────────────────
+
+// One-time interactive flow to mint a brand-new refresh_token via the browser.
+// Needed when Google revokes/expires the stored refresh_token (e.g. the 7-day
+// expiry that applies while the OAuth app is in "Testing" publishing status).
+// Run it yourself so the browser opens on your machine: `! node footy-credit.mjs authorize`
+async function authorize() {
+  const { client_id, client_secret } = CONFIG.credentials;
+  const port = Number(process.env.FOOTY_CREDIT_OAUTH_PORT) || 53682;
+  const redirectUri = `http://localhost:${port}/`;
+  const scopes = [
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/gmail.readonly',
+  ];
+  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+    client_id,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: scopes.join(' '),
+    access_type: 'offline',
+    prompt: 'consent', // force Google to return a fresh refresh_token
+  });
+
+  const code = await new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      const url = new URL(req.url, redirectUri);
+      const c = url.searchParams.get('code');
+      const err = url.searchParams.get('error');
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(`<h2>${c ? 'Authorized — return to the terminal, you can close this tab.' : 'Authorization failed: ' + (err || 'no code')}</h2>`);
+      server.close();
+      c ? resolve(c) : reject(new Error(err || 'No authorization code received'));
+    });
+    server.listen(port, () => {
+      console.log('\nOpen this URL in your browser, sign in, and approve access:\n');
+      console.log(authUrl + '\n');
+      console.log(`Waiting for the redirect to ${redirectUri} ...`);
+      console.log('(If you get "redirect_uri_mismatch", add this redirect URI to the OAuth client in Google Cloud Console.)');
+    });
+  });
+
+  const resp = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code, client_id, client_secret, redirect_uri: redirectUri, grant_type: 'authorization_code',
+    }),
+  });
+  const data = await resp.json();
+  if (!data.refresh_token) throw new Error('No refresh_token returned: ' + JSON.stringify(data));
+
+  const creds = JSON.parse(fs.readFileSync(CRED_PATH, 'utf8'));
+  creds.refresh_token = data.refresh_token;
+  fs.writeFileSync(CRED_PATH, JSON.stringify(creds, null, 2));
+  fs.chmodSync(CRED_PATH, 0o600);
+
+  const state = loadState();
+  state.access_token = data.access_token;
+  saveState(state);
+
+  console.log(`\nNew refresh_token saved to ${CRED_PATH}`);
+  console.log('Access token cached — you can run the workflow now.');
+}
 
 async function refreshToken() {
   const { refresh_token, client_id, client_secret } = CONFIG.credentials;
@@ -377,6 +441,24 @@ async function readSessions(mode) {
       s2: s2.values?.[i + 3] || [],
     })),
   };
+
+  // Order output alphabetically by first name. Non-player rows (blank cells,
+  // Slush Fund) are skipped by the renderers regardless, so push them to the end.
+  const firstName = (r) =>
+    String(r.name || '')
+      .replace(/\s*\([^)]*\)\s*$/, '')
+      .trim()
+      .split(/\s+/)[0]
+      .toLowerCase();
+  const isPlayer = (r) => {
+    const n = String(r.name || '').trim();
+    return n && n !== 'Slush Fund';
+  };
+  sess.rows.sort((a, b) => {
+    const pa = isPlayer(a), pb = isPlayer(b);
+    if (pa !== pb) return pa ? -1 : 1;
+    return firstName(a).localeCompare(firstName(b));
+  });
 
   // Save for build-email
   state[mode] = { ...state[mode], sess };
@@ -743,6 +825,10 @@ async function runAll(mode, rowVals) {
 const [,, mode, command, ...args] = process.argv;
 
 // Mode-less commands handled first.
+if (mode === 'authorize') {
+  await authorize();
+  process.exit(0);
+}
 if (mode === 'refresh-token') {
   await refreshToken();
   process.exit(0);
@@ -754,6 +840,7 @@ if (mode === 'update-page') {
 
 if (!mode || !command) {
   console.log('Usage: node footy-credit.mjs <fri|mon> <command> [args...]');
+  console.log('       node footy-credit.mjs authorize');
   console.log('       node footy-credit.mjs refresh-token');
   console.log('       node footy-credit.mjs update-page');
   console.log('\nCommands: refresh-token, update-page, get-players, search-emails,');

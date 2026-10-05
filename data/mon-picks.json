@@ -1,0 +1,301 @@
+{
+  "14 Sep 26": {
+    "thread": "1a07fd54bdb58cc8",
+    "cutoff": "2026-09-08T17:00:00.000Z",
+    "signups": [
+      12,
+      16,
+      26,
+      10,
+      17,
+      21,
+      35,
+      33,
+      29,
+      32
+    ],
+    "suggested": {
+      "picked": [
+        12,
+        16,
+        26,
+        10,
+        17,
+        21,
+        35,
+        33,
+        29,
+        32
+      ],
+      "reserves": []
+    },
+    "reasons": {
+      "10": "regular: regular 7/8, 19/26, 38/52 (best 88%)",
+      "12": "regular: regular 7/8, 25/26, 51/52 (best 98%)",
+      "16": "regular: regular 6/8, 21/26, 41/52 (best 81%)",
+      "17": "regular: regular 7/8, 17/26, 36/52 (best 88%)",
+      "21": "other: not regular 3/8, 14/26, 23/52 (best 54%)",
+      "26": "regular: regular 4/8, 18/26, 39/52 (best 75%)",
+      "29": "other: not regular 4/8, 8/26, 15/52 (best 50%)",
+      "32": "other: not regular 2/8, 8/26, 22/52 (best 42%)",
+      "33": "other: not regular 4/8, 4/26, 11/52 (best 50%)",
+      "35": "other: not regular 1/8, 12/26, 19/52 (best 46%)"
+    },
+    "guests": [],
+    "log": [
+      "Tue 8 Sept, 08:04  + John Stirling  [organiser]",
+      "Tue 8 Sept, 08:05  + Richard Dexter  [reply]",
+      "Tue 8 Sept, 08:06  + Alex L  [reply]",
+      "Tue 8 Sept, 08:06  + Steve Hughes  [reply]",
+      "Tue 8 Sept, 08:08  + Hossam  [reply]",
+      "Tue 8 Sept, 08:14  + Alasdair Barnett  [reply]",
+      "Tue 8 Sept, 08:20  + Andy Rutter  [reply]",
+      "Tue 8 Sept, 08:23  + Michael Scott  [reply]",
+      "Tue 8 Sept, 08:30  + Luke Harnwell  [reply]",
+      "Tue 8 Sept, 08:31  + John Harnwell  [reply]",
+      "Tue 8 Sept, 08:36  + Andy W  [reply]",
+      "Tue 8 Sept, 09:17  + Ciaran McAleer  [reply]",
+      "Tue 8 Sept, 15:12  - Alasdair Barnett  [reply]",
+      "Sat 12 Sept, 10:44  - Andy W  [reply]"
+    ],
+    "actual": [
+      10,
+      12,
+      16,
+      17,
+      21,
+      26,
+      29,
+      32,
+      33,
+      35
+    ]
+  },
+  "21 Sep 26": {
+    "thread": "1a0a3e2974e8c6a9",
+    "cutoff": "2026-09-15T17:00:00.000Z",
+    "signups": [
+      12,
+      26,
+      10,
+      16,
+      15,
+      29,
+      11,
+      33,
+      32,
+      21,
+      35
+    ],
+    "suggested": {
+      "picked": [
+        12,
+        26,
+        10,
+        16,
+        15,
+        29,
+        11,
+        33,
+        32,
+        21
+      ],
+      "reserves": [
+        35
+      ]
+    },
+    "reasons": {
+      "10": "regular: regular 7/8, 20/26, 38/52 (best 88%)",
+      "11": "regular: regular 5/8, 18/26, 36/52 (best 69%)",
+      "12": "regular: regular 7/8, 25/26, 51/52 (best 98%)",
+      "15": "regular: regular 2/8, 14/26, 34/52 (best 65%)",
+      "16": "regular: regular 6/8, 21/26, 41/52 (best 81%)",
+      "21": "other: not regular 3/8, 14/26, 23/52 (best 54%)",
+      "26": "regular: regular 5/8, 18/26, 39/52 (best 75%)",
+      "29": "regular: regular 5/8, 8/26, 16/52 (best 63%)",
+      "32": "other: not regular 2/8, 9/26, 23/52 (best 44%)",
+      "33": "regular: regular 5/8, 5/26, 12/52 (best 63%)",
+      "35": "reserve-only: offered reserve only"
+    },
+    "guests": [],
+    "log": [
+      "Tue 15 Sept, 08:05  + John Stirling  [organiser]",
+      "Tue 15 Sept, 08:10  + Steve Hughes  [reply]",
+      "Tue 15 Sept, 08:12  + Andy Rutter  [reply]",
+      "Tue 15 Sept, 08:25  + Richard Dexter  [reply]",
+      "Tue 15 Sept, 08:42  + Ciaran McAleer  [reply]",
+      "Tue 15 Sept, 08:50  + Mark Sutton  [reply]",
+      "Tue 15 Sept, 09:08  + Alex L  [reply]",
+      "Tue 15 Sept, 09:10  + John Harnwell  [reply]",
+      "Tue 15 Sept, 10:46  + Rob Saunders  [reply]",
+      "Tue 15 Sept, 13:24  + Luke Harnwell  [reply]",
+      "Tue 15 Sept, 14:22  + Hossam (reserve only)  [reply]",
+      "Mon 21 Sept, 15:57  + Greg Rudd  [reply]",
+      "Mon 21 Sept, 18:01  - Greg Rudd  [reply]"
+    ],
+    "actual": [
+      10,
+      11,
+      12,
+      15,
+      16,
+      21,
+      26,
+      29,
+      32,
+      33
+    ]
+  },
+  "28 Sep 26": {
+    "thread": "1a0c7f3d0bff1389",
+    "cutoff": "2026-09-22T17:00:00.000Z",
+    "signups": [
+      12,
+      17,
+      27,
+      26,
+      29,
+      10,
+      16,
+      33,
+      21,
+      34,
+      18
+    ],
+    "suggested": {
+      "picked": [
+        12,
+        17,
+        27,
+        26,
+        29,
+        10,
+        16,
+        33,
+        21,
+        34
+      ],
+      "reserves": [
+        18
+      ]
+    },
+    "reasons": {
+      "10": "regular: regular 7/8, 21/26, 38/52 (best 88%)",
+      "12": "regular: regular 7/8, 25/26, 51/52 (best 98%)",
+      "16": "regular: regular 6/8, 21/26, 41/52 (best 81%)",
+      "17": "regular: regular 6/8, 17/26, 37/52 (best 75%)",
+      "18": "other (late): not regular 2/8, 6/26, 18/52 (best 35%)",
+      "21": "other: not regular 3/8, 14/26, 23/52 (best 54%)",
+      "26": "regular: regular 6/8, 18/26, 40/52 (best 77%)",
+      "27": "regular: regular 2/8, 17/26, 35/52 (best 67%)",
+      "29": "regular: regular 6/8, 8/26, 16/52 (best 75%)",
+      "33": "regular: regular 6/8, 6/26, 13/52 (best 75%)",
+      "34": "other: not regular 2/8, 7/26, 10/52 (best 27%)"
+    },
+    "guests": [],
+    "log": [
+      "Tue 22 Sept, 08:10  + John Stirling  [organiser]",
+      "Tue 22 Sept, 08:11  + Michael Scott  [reply]",
+      "Tue 22 Sept, 08:13  + Andy W  [reply]",
+      "Tue 22 Sept, 08:19  + Steve Hughes  [reply]",
+      "Tue 22 Sept, 08:21  + Rob Saunders  [reply]",
+      "Tue 22 Sept, 08:24  + John Harnwell  [reply]",
+      "Tue 22 Sept, 08:25  + Alex L  [reply]",
+      "Tue 22 Sept, 08:25  + Andy Rutter  [reply]",
+      "Tue 22 Sept, 08:45  + Richard Dexter  [reply]",
+      "Tue 22 Sept, 09:45  + Greg Rudd  [reply]",
+      "Tue 22 Sept, 10:31  + Hossam  [reply]",
+      "Tue 22 Sept, 10:57  + Luke Harnwell  [reply]",
+      "Sun 27 Sept, 17:35  - Rob Saunders  [reply]",
+      "Mon 28 Sept, 09:18  + Eugene  [reply]",
+      "Mon 28 Sept, 17:30  - Hossam  [reply]"
+    ],
+    "actual": [
+      10,
+      12,
+      16,
+      17,
+      21,
+      26,
+      27,
+      29,
+      33,
+      34
+    ]
+  },
+  "5 Oct 26": {
+    "thread": "1a0ec045264ccc3a",
+    "cutoff": "2026-09-29T17:00:00.000Z",
+    "signups": [
+      12,
+      17,
+      22,
+      26,
+      27,
+      11,
+      16,
+      29,
+      33,
+      28,
+      34
+    ],
+    "suggested": {
+      "picked": [
+        12,
+        17,
+        22,
+        26,
+        27,
+        11,
+        16,
+        29,
+        33,
+        28
+      ],
+      "reserves": [
+        34
+      ]
+    },
+    "reasons": {
+      "11": "regular: regular 4/8, 17/26, 35/52 (best 67%)",
+      "12": "regular: regular 7/8, 25/26, 51/52 (best 98%)",
+      "16": "regular: regular 6/8, 21/26, 41/52 (best 81%)",
+      "17": "regular: regular 6/8, 18/26, 37/52 (best 75%)",
+      "22": "regular: regular 1/8, 14/26, 31/52 (best 60%)",
+      "26": "regular: regular 7/8, 19/26, 41/52 (best 88%)",
+      "27": "regular: regular 2/8, 17/26, 35/52 (best 67%)",
+      "28": "other: not regular 0/8, 0/26, 4/52 (best 8%)",
+      "29": "regular: regular 7/8, 8/26, 17/52 (best 88%)",
+      "33": "regular: regular 7/8, 7/26, 14/52 (best 88%)",
+      "34": "other: not regular 3/8, 8/26, 11/52 (best 38%)"
+    },
+    "guests": [],
+    "log": [
+      "Tue 29 Sept, 08:15  + John Stirling  [organiser]",
+      "Tue 29 Sept, 08:15  + Michael Scott  [reply]",
+      "Tue 29 Sept, 08:15  + Alasdair Barnett  [reply]",
+      "Tue 29 Sept, 08:16  + Fin Miller  [reply]",
+      "Tue 29 Sept, 08:16  + Steve Hughes  [reply]",
+      "Tue 29 Sept, 08:27  + Andy W  [reply]",
+      "Tue 29 Sept, 08:28  + Rob Saunders  [reply]",
+      "Tue 29 Sept, 08:30  + Richard Dexter  [reply]",
+      "Tue 29 Sept, 08:37  + Ciaran McAleer  [reply]",
+      "Tue 29 Sept, 08:39  + Greg Rudd  [reply]",
+      "Tue 29 Sept, 09:14  + John Harnwell  [reply]",
+      "Tue 29 Sept, 10:01  + Luke Harnwell  [reply]",
+      "Mon 5 Oct, 12:28  - Ciaran McAleer  [reply]"
+    ],
+    "actual": [
+      11,
+      12,
+      16,
+      17,
+      22,
+      26,
+      27,
+      28,
+      29,
+      33
+    ]
+  }
+}

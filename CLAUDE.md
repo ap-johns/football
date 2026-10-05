@@ -1,96 +1,55 @@
 # Footy Credit — Claude Code Instructions
 
 This folder contains `footy-credit.mjs`, a Node.js script for managing the Friday and
-Monday 5-a-side football credit spreadsheets and emails.
+Monday 5-a-side football credit spreadsheets and emails. Requires Node 18+.
 
-## Setup
+## Commands
 
-Place `footy-credit.mjs` somewhere accessible (e.g. `~/scripts/`). Requires Node 18+
-(uses native fetch).
+The workflows live in `.claude/commands/js/` and run as slash commands:
 
-## "fri credit" or "mon credit" workflow
+| John says / types                     | Follow                              |
+|---------------------------------------|-------------------------------------|
+| `/js:fri-credit` or "fri credit"      | `.claude/commands/js/fri-credit.md` |
+| `/js:mon-credit` or "mon credit"      | `.claude/commands/js/mon-credit.md` |
+| `/js:mon-pick` or "mon pick"          | `.claude/commands/js/mon-pick.md`   |
+| `/js:mon-pick report` or "mon pick report" | same file, report branch       |
 
-When John says "fri credit" or "mon credit", follow these steps:
+When John types the plain phrase, follow the matching command file. Always use the
+local script, never a browser or the claude.ai versions of these skills.
 
-### 1. Refresh the OAuth token
+Anything John adds (e.g. "fri credit. charge andy r for mark r") is an instruction
+for the player list: value 2 on that player's row.
+
+One-shot form of the credit workflow, once the rows are known:
 ```bash
 node footy-credit.mjs refresh-token
-```
-
-### 2. Get the player list from the spreadsheet
-```bash
-node footy-credit.mjs fri get-players    # or mon
-```
-This returns player names and their spreadsheet row numbers. Build a lookup table:
-- Extract abbreviation in brackets → lowercased → maps to full name
-- e.g. `Andy Rutter (AR)` → `ar` → row 10
-- For entries without brackets, use first name lowercased (e.g. `ruban`, `waq`)
-- **Known nickname:** "Guesty" = Neil Guest (fri spreadsheet row 39). Regular player, NOT a guest.
-
-### 3. Search for the sign-up email thread
-```bash
-node footy-credit.mjs fri search-emails    # or mon
-```
-Look for the sign-up thread (subject like "Friday footy 10th April" or "Mondays list").
-Ignore subjects containing "fri credit" or "mon credit" — those are financial emails.
-
-### 4. Fetch the full thread
-```bash
-node footy-credit.mjs fri get-thread <threadId>    # or mon
-```
-Read through messages from most recent to oldest. Find the authoritative player list:
-1. **Teams with colours** — e.g. "Colours js al michael / Whites mark rs dex"
-2. **John's latest running tally** — e.g. "10 js alex al steve dex mark rs michael jh ruban"
-3. **Individual replies** — build from positive replies if no tally exists
-
-**Cap the list at 10.** Only 10 play per session. If the email thread lists more than
-10 names and there are no explicit teams/colours from the organiser, take only the
-first 10 on the list and ignore the rest. Do not write the 11th+ player into the
-spreadsheet.
-
-### 5. Match players to spreadsheet rows
-Resolve each abbreviation to a row number using the lookup from step 2.
-
-**Guest players:** If someone on the list is NOT found on the spreadsheet, they are a
-guest player. Simply skip them — do NOT write anything for guests. John will update
-guest charges manually later.
-
-### 6. Run the spreadsheet update + email
-```bash
-node footy-credit.mjs fri read-headers
-node footy-credit.mjs fri copy-columns
-node footy-credit.mjs fri write-played 10:1,14:1,15:1,16:1,18:1,19:1,20:1,23:1,38:1,39:1
-node footy-credit.mjs fri hide-old
-node footy-credit.mjs fri read-sessions
-node footy-credit.mjs fri build-email
-node footy-credit.mjs fri send-preview
-node footy-credit.mjs fri send-email
-```
-
-Or in one shot (after you know the rows):
-```bash
 node footy-credit.mjs fri run-all 10:1,14:1,15:1,16:1,18:1,19:1,20:1,23:1,38:1,39:1
 ```
+`row:value` pairs; `1` for a regular, `2` for a regular paying for a guest. The script
+sends the preview to thejgs@gmail.com and then the real email. No confirmation needed.
 
-The `write-played` format is `row:value` pairs. Use `1` for a regular player.
-Use `2` if a regular is paying for a guest (but normally just skip guests).
+## Player facts
 
-### 7. Done
-The script sends a preview to thejgs@gmail.com then the real email to the group
-automatically. No confirmation needed.
+- **Guests** are anyone on the list who is not on the spreadsheet. Skip them; write
+  nothing. John charges guests manually, except:
+- **Bobby:** guest on both days, and Michael Scott always pays for him. When Bobby is
+  on the list, write `2` for Michael (fri row 20, mon row 17) and skip Bobby.
+- **"Guesty"** = Neil Guest (fri row 39). Regular player, NOT a guest.
+- **Guy Fisher** is fri row 41, a regular added below the original 10-40 block. The
+  script ranges read through row 42 to include him.
+- **Cap the list at 10.** Only 10 play. If a thread lists more with no explicit
+  teams, take the first 10. Names after "reserves" did not play.
 
 ## Spreadsheet details
 
 **Friday:**
 - Spreadsheet: `1maWZi_HTOjyTbeeM3uQ2ovkFlQTCUpIcLHkvTODUAXc`
-- Group: `kkfrifooty@googlegroups.com`
+- Group: `kkfrifooty@googlegroups.com`; organiser Paul Buggs
 - Player rows 10-41 in column A of the "Credit" tab (Slush Fund at row 42)
-- **Guy Fisher is row 41** — a regular, added below the original 10-40 block. He
-  is NOT a guest. The script ranges read through row 42 to include him.
 
 **Monday:**
 - Spreadsheet: `11pKmY3UITJ1faNxO_Hdb9XpVGXx63pfhjuEOc4pyw4s`
-- Group: `symbionicsfooty@googlegroups.com`
+- Group: `symbionicsfooty@googlegroups.com`; organiser John
 - Player rows 10-40 in column A of the "Credit" tab
 
 ## How the spreadsheet works
@@ -105,4 +64,11 @@ The Credit column uses a formula — never overwrite it. Only write into Played.
 
 `copy-columns` copies the blank template BEFORE data is written, so destination is
 blank too. `PASTE_NORMAL` carries over all formatting and conditional formatting rules.
-No cleanup is needed after the copy.
+
+## Monday pick trial (private)
+
+John is trialling a written selection rule for Monday via `mon pick`. Nothing about it
+goes to the group. Details and the rule text are in `.claude/commands/js/mon-pick.md`.
+Supporting files: `players.mon.json` (sender emails and nicknames mapped to sheet
+rows) and `data/mon-picks.json` (the trial ledger; `mon credit` fills in the actual
+players automatically).

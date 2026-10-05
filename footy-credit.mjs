@@ -20,6 +20,9 @@
  *   build-email                    Build HTML email table from session data
  *   send-preview                   Send preview email to thejgs@gmail.com
  *   send-email                     Send credit email to the group
+ *   pick [--cutoff "YYYY-MM-DD HH:MM"] [--thread <id>] [--no-save] [--verbose]
+ *                                  (mon) Rank this week's sign-ups by the trial selection rule; prints only
+ *   pick-report                    (mon) Compare the rule's picks with who actually played
  *   run-all <row:val,...>          Run copy-columns → write-played → hide-old → read-sessions → build-email → send-preview → send-email
  */
 
@@ -796,6 +799,7 @@ async function updatePage() {
   const sh = (cmd) => execSync(cmd, { stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
   try {
     sh('git add docs');
+    if (fs.existsSync(path.join(process.cwd(), 'data'))) sh('git add data');
     const staged = sh('git diff --cached --name-only');
     if (!staged) { console.log('No page changes to commit.'); return; }
     sh(`git commit -m "Update credit pages ${updated}"`);
@@ -811,6 +815,7 @@ async function runAll(mode, rowVals) {
   await readHeaders(mode);
   await copyColumns(mode);
   await writePlayed(mode, rowVals);
+  recordActual(mode, rowVals);
   await hideOld(mode);
   await readSessions(mode);
   buildEmail(mode);
@@ -818,6 +823,417 @@ async function runAll(mode, rowVals) {
   await sendEmail(mode);
   try { await updatePage(); } catch (e) { console.error('update-page failed:', e.message); }
   console.log('\n=== Done! ===');
+}
+
+// ─── Pick: Monday selection rule (private trial) ───────────────────────────────
+//
+// Rule under trial (not published to the group):
+//   Reply by 18:00 on the day the list goes out (normally Tuesday). Everyone who
+//   replies by then is ranked: (1) signed up last week and missed out, (2) regulars
+//   = 58% attendance over the last 8, 26 or 52 sessions, whichever is highest
+//   (signing up on time and being left out counts as attended), (3) everyone else.
+//   Ties by reply time. Top 10 play; the rest are reserves in order. Replies after
+//   the cut-off rank below every on-time reply. People who only offered to be a
+//   reserve go last.
+
+const PICK = {
+  cutoffHour: 18,
+  regularPct: 0.58,
+  windows: [8, 26, 52],
+  organiserEmail: 'thejgs@gmail.com',
+  playerRows: [10, 40],
+};
+
+function playersPath(mode) { return path.join(process.cwd(), `players.${mode}.json`); }
+function ledgerPath(mode) { return path.join(process.cwd(), 'data', `${mode}-picks.json`); }
+
+function loadPlayers(mode) {
+  try { return JSON.parse(fs.readFileSync(playersPath(mode), 'utf8')); }
+  catch (e) { throw new Error(`Cannot read ${playersPath(mode)}: ${e.message}`); }
+}
+function loadLedger(mode) {
+  try { return JSON.parse(fs.readFileSync(ledgerPath(mode), 'utf8')); } catch { return {}; }
+}
+function saveLedger(mode, ledger) {
+  fs.mkdirSync(path.dirname(ledgerPath(mode)), { recursive: true });
+  fs.writeFileSync(ledgerPath(mode), JSON.stringify(ledger, null, 2) + '\n');
+}
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtSheetDate(d) { return `${d.getDate()} ${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`; }
+function parseSheetDate(s) {
+  const m = /^(\d+) (\w{3}) (\d{2})$/.exec(String(s).trim());
+  if (!m) return null;
+  return new Date(2000 + Number(m[3]), MONTHS.indexOf(m[2]), Number(m[1]));
+}
+function nextMonday(from) {
+  const d = new Date(from); d.setHours(0, 0, 0, 0);
+  const add = ((8 - d.getDay()) % 7) || 7;
+  d.setDate(d.getDate() + add);
+  return d;
+}
+function fmtTime(d) {
+  return d.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function parseFrom(from) {
+  const m = /^(.*?)\s*<([^>]+)>\s*$/.exec(from || '');
+  const name = (m ? m[1] : '').replace(/^["']|["']$/g, '').replace(/^'|'\s+via\s+.*$/i, '').trim();
+  const email = (m ? m[2] : from || '').trim().toLowerCase();
+  return { name, email };
+}
+
+function htmlToText(html) {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|tr|li|blockquote)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;|&rsquo;/g, "'").replace(/&quot;/g, '"');
+}
+function getBodyAny(payload) {
+  const plain = getBody(payload);
+  if (plain.trim()) return plain;
+  const html = (function walk(p) {
+    let t = '';
+    if (p.mimeType === 'text/html' && p.body?.data) t += decodeBase64Url(p.body.data);
+    (p.parts || []).forEach(x => { t += walk(x); });
+    return t;
+  })(payload);
+  return htmlToText(html);
+}
+
+// Keep only the new content of a reply: stop at quoted text or signatures.
+function contentLines(text) {
+  const out = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.replace(/​|﻿/g, '').trim();
+    if (!line) continue;
+    if (line.startsWith('>')) break;
+    if (/^(on .+ wrote:?$|from:|sent from|sent:|-{2,}$|_{5,}|am \d{2}\.\d{2}\.\d{4} um)/i.test(line)) break;
+    if (/^(yahoo mail:|regards|best regards|cheers|thanks!?$|thank you$)/i.test(line)) break;
+    out.push(line);
+  }
+  return out;
+}
+
+function findPlayer(players, { email, name }) {
+  const e = (email || '').toLowerCase();
+  const n = (name || '').toLowerCase().trim();
+  return players.find(p => p.aliases.includes(e))
+      || players.find(p => n && p.aliases.includes(n))
+      || players.find(p => n && p.name.toLowerCase() === n)
+      || null;
+}
+function findByToken(players, token) {
+  const t = token.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!t) return null;
+  return players.find(p => p.aliases.includes(t) || p.short === t)
+      || players.find(p => p.name.toLowerCase().split(' ')[0] === t)
+      || null;
+}
+
+function classifyReply(lines) {
+  const s = lines.slice(0, 3).join(' ').toLowerCase();
+  if (!s.trim()) return 'empty';
+  if (/reacted via gmail/.test(s)) return 'ignore';
+  if (/\b(sorry|drop|pull(ing)? out|can'?t|cannot|unable|away|sit this one out|not available|have to miss)\b/.test(s)) return 'drop';
+  if (/\b(reserve|bench|waiting list|if (you are|you're) short|if short|standby|sub if needed)\b/.test(s)) return 'reserve';
+  if (/(\byes\b|\byep\b|\byeah\b|\bin please\b|\bi'?m in\b|\bcount me in\b|\+1|\bavailable\b|love to play|\bplease\b|^in\b|\bin\b.*\bfor\b)/.test(s)) return 'yes';
+  return 'unknown';
+}
+
+async function findSignupThread(mode) {
+  const { groupEmail } = CONFIG[mode];
+  const q = encodeURIComponent(`to:${groupEmail} subject:"mondays list" newer_than:14d`);
+  const data = await gFetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads?q=${q}&maxResults=10`);
+  const candidates = [];
+  for (const t of data.threads || []) {
+    const th = await gFetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${t.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=Date`);
+    const first = th.messages?.[0];
+    const hdr = (n) => first?.payload?.headers?.find(h => h.name === n)?.value || '';
+    const subject = hdr('Subject');
+    if (!/mondays list/i.test(subject) || /credit/i.test(subject)) continue;
+    candidates.push({ threadId: t.id, subject, date: new Date(hdr('Date')), count: th.messages.length });
+  }
+  candidates.sort((a, b) => b.date - a.date);
+  if (!candidates.length) throw new Error('No "Mondays list" thread found in the last 14 days');
+  return candidates[0];
+}
+
+async function fetchThreadMessages(threadId) {
+  const data = await gFetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`);
+  return (data.messages || []).map(msg => {
+    const hdr = (n) => msg.payload?.headers?.find(h => h.name === n)?.value || '';
+    const { name, email } = parseFrom(hdr('From'));
+    return { id: msg.id, fromName: name, fromEmail: email, date: new Date(hdr('Date')), lines: contentLines(getBodyAny(msg.payload)) };
+  }).sort((a, b) => a.date - b.date);
+}
+
+// Walk the thread in time order and build the sign-up list.
+function parseSignups(messages, players) {
+  const signups = new Map();   // row -> { at, reserveOnly, via }
+  const guests = [];           // { name, email, at }
+  const notes = [];            // human-readable log of what was understood
+  const unknown = [];          // messages the parser could not interpret
+
+  const signUp = (p, at, via, reserveOnly = false) => {
+    const cur = signups.get(p.row);
+    if (cur && !cur.dropped) { if (cur.reserveOnly && !reserveOnly) cur.reserveOnly = false; return; }
+    signups.set(p.row, { at, via, reserveOnly, dropped: false });
+    notes.push(`${fmtTime(at)}  + ${p.name}${reserveOnly ? ' (reserve only)' : ''}  [${via}]`);
+  };
+  const dropOut = (p, at, via) => {
+    const cur = signups.get(p.row);
+    if (!cur || cur.dropped) return;
+    cur.dropped = true; cur.droppedAt = at;
+    notes.push(`${fmtTime(at)}  - ${p.name}  [${via}]`);
+  };
+
+  messages.forEach((m, idx) => {
+    const isOrganiser = m.fromEmail === PICK.organiserEmail;
+    const player = findPlayer(players, { email: m.fromEmail, name: m.fromName });
+
+    if (isOrganiser) {
+      if (idx === 0 && player) signUp(player, m.date, 'organiser');
+      for (const line of m.lines) {
+        const swap = /^(.+?)\s+out\s*,\s*(.+?)\s+in\b/i.exec(line);
+        const onlyOut = /^(.+?)\s+out\s*$/i.exec(line);
+        const onlyIn = /^(.+?)\s+in\s*$/i.exec(line);
+        const apply = (tok, fn) => {
+          const p = findByToken(players, tok);
+          if (p) fn(p, m.date, 'organiser'); else unknown.push(`${fmtTime(m.date)}  organiser named "${tok}" — not matched to a player`);
+        };
+        if (swap) { apply(swap[1], dropOut); apply(swap[2], signUp); }
+        else if (onlyOut) apply(onlyOut[1], dropOut);
+        else if (onlyIn) apply(onlyIn[1], signUp);
+      }
+      return;
+    }
+
+    const kind = classifyReply(m.lines);
+    const who = player ? player.name : `${m.fromName || m.fromEmail} (not on sheet)`;
+    if (kind === 'ignore') return;
+    if (!player) {
+      if (kind === 'yes' || kind === 'empty' || kind === 'reserve') guests.push({ name: m.fromName, email: m.fromEmail, at: m.date, kind });
+      else if (kind !== 'drop') unknown.push(`${fmtTime(m.date)}  ${who}: "${m.lines[0] || ''}"`);
+      return;
+    }
+    if (kind === 'yes' || kind === 'empty') signUp(player, m.date, kind === 'empty' ? 'reply (no text)' : 'reply');
+    else if (kind === 'reserve') signUp(player, m.date, 'reply', true);
+    else if (kind === 'drop') dropOut(player, m.date, 'reply');
+    else {
+      const cur = signups.get(player.row);
+      unknown.push(`${fmtTime(m.date)}  ${who}${cur && !cur.dropped ? ' (already signed up)' : ''}: "${(m.lines[0] || '').slice(0, 80)}"`);
+    }
+  });
+
+  return { signups, guests, notes, unknown };
+}
+
+// All filled session columns (hidden or not), newest first. Excludes the blank template.
+async function sessionColumns(mode) {
+  const { spreadsheetId } = CONFIG[mode];
+  const data = await gFetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets(data(rowData(values(formattedValue))))&ranges=Credit!7:8&includeGridData=true`
+  );
+  const rows = data.sheets?.[0]?.data?.[0]?.rowData || [];
+  const r7 = rows[0]?.values || [], r8 = rows[1]?.values || [];
+  const cols = [];
+  r7.forEach((cell, col) => {
+    const date = cell?.formattedValue || '';
+    const cnt = (r8[col]?.formattedValue || '').trim();
+    if (/^\d+ \w+ \d+$/.test(date) && cnt && !cnt.startsWith('-') && Number(cnt) > 0) cols.push({ col, date, count: Number(cnt) });
+  });
+  return cols.sort((a, b) => b.col - a.col);
+}
+
+// Map row -> array of 0/1 for the given session columns (same order as cols).
+async function attendance(mode, cols) {
+  const { spreadsheetId } = CONFIG[mode];
+  const [r0, r1] = PICK.playerRows;
+  const ranges = cols.map(c => 'ranges=' + encodeURIComponent(`Credit!${colIdx2Letter(c.col)}${r0}:${colIdx2Letter(c.col)}${r1}`)).join('&');
+  const { valueRanges } = await gFetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${ranges}&valueRenderOption=UNFORMATTED_VALUE`
+  );
+  const byRow = new Map();
+  for (let row = r0; row <= r1; row++) {
+    byRow.set(row, valueRanges.map(vr => (Number(vr.values?.[row - r0]?.[0]) > 0 ? 1 : 0)));
+  }
+  return byRow;
+}
+
+function regularStatus(played) {
+  // Best rate over any window, so a recent dip doesn't drop a long-term regular.
+  const wins = PICK.windows.map(n => {
+    const slice = played.slice(0, n);
+    return { n: slice.length, c: slice.reduce((a, b) => a + b, 0) };
+  }).filter(w => w.n > 0);
+  const best = wins.reduce((b, w) => (!b || w.c / w.n > b.c / b.n ? w : b), null);
+  const regular = !!best && best.c / best.n >= PICK.regularPct;
+  const text = wins.map(w => `${w.c}/${w.n}`).join(', ') + (best ? ` (best ${Math.round(100 * best.c / best.n)}%)` : '');
+  return { regular, text };
+}
+
+function parseCutoff(str, fallback) {
+  if (!str) return fallback;
+  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/.exec(str);
+  if (!m) throw new Error('--cutoff must be "YYYY-MM-DD HH:MM"');
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]));
+}
+
+async function pick(mode, args) {
+  if (mode !== 'mon') throw new Error('pick is only set up for Monday');
+  const save = !args.includes('--no-save');
+  const verbose = args.includes('--verbose');
+  const cutoffArg = args[args.indexOf('--cutoff') + 1];
+  const players = loadPlayers(mode);
+  const byRow = new Map(players.map(p => [p.row, p]));
+
+  const threadArg = args.includes('--thread') ? args[args.indexOf('--thread') + 1] : null;
+  const thread = threadArg ? { threadId: threadArg, subject: '(given thread)' } : await findSignupThread(mode);
+  const messages = await fetchThreadMessages(thread.threadId);
+  const sent = messages[0].date;
+  const sessionDate = fmtSheetDate(nextMonday(sent));
+  const cutoff = parseCutoff(args.includes('--cutoff') ? cutoffArg : null,
+    new Date(sent.getFullYear(), sent.getMonth(), sent.getDate(), PICK.cutoffHour, 0));
+
+  console.log(`\nThread: "${thread.subject}" — ${messages.length} messages, sent ${fmtTime(sent)}`);
+  console.log(`Session: ${sessionDate}    Cut-off: ${fmtTime(cutoff)}\n`);
+
+  const { signups, guests, notes, unknown } = parseSignups(messages, players);
+
+  // Attendance up to (not including) this session.
+  const allCols = await sessionColumns(mode);
+  const cols = allCols.filter(c => parseSheetDate(c.date) < parseSheetDate(sessionDate)).slice(0, Math.max(...PICK.windows));
+  const att = await attendance(mode, cols);
+  // Signing up on time and being left out counts as attended, so a keen newcomer
+  // isn't stuck alternating between owed and bumped.
+  const ledger = loadLedger(mode);
+  cols.forEach((c, i) => {
+    const e = ledger[c.date];
+    if (!e?.signups) return;
+    e.signups.filter(r => !/^reserve-only|\(late\)/.test(e.reasons?.[r] || '')).forEach(r => {
+      const a = att.get(r);
+      if (a && !a[i]) a[i] = 1;
+    });
+  });
+  // If this session is already on the sheet (backfill), take the actual 10 from it.
+  const thisCol = allCols.find(c => c.date === sessionDate);
+  const actualRows = thisCol ? [...(await attendance(mode, [thisCol])).entries()].filter(([, v]) => v[0]).map(([r]) => r) : null;
+
+  // Owed: signed up last week and didn't play. Prefer the actual outcome; fall
+  // back to the rule's own reserves if the credit run hasn't recorded actuals.
+  const prevKey = Object.keys(ledger)
+    .filter(k => parseSheetDate(k) && parseSheetDate(k) < parseSheetDate(sessionDate))
+    .sort((a, b) => parseSheetDate(b) - parseSheetDate(a))[0];
+  const prev = prevKey ? ledger[prevKey] : null;
+  const owedRows = new Set(
+    prev ? (prev.actual ? (prev.signups || []).filter(r => !prev.actual.includes(r)) : (prev.suggested?.reserves || [])) : []
+  );
+
+  const entries = [...signups.entries()].filter(([, s]) => !s.dropped).map(([row, s]) => {
+    const p = byRow.get(row);
+    const { regular, text } = regularStatus(att.get(row) || []);
+    const owed = owedRows.has(row);
+    const late = s.at > cutoff;
+    const tier = s.reserveOnly ? 4 : owed ? 1 : regular ? 2 : 3;
+    const reason = s.reserveOnly ? 'offered reserve only'
+      : owed ? `missed out ${prevKey}` + (regular ? `, ${text}` : '')
+      : regular ? `regular ${text}` : `not regular ${text}`;
+    return { row, p, s, tier, late, reason };
+  });
+  entries.sort((a, b) =>
+    (a.s.reserveOnly - b.s.reserveOnly) || (a.late - b.late)
+    || (a.late ? 0 : (a.tier - b.tier)) || (a.s.at - b.s.at));
+
+  const picked = entries.slice(0, 10), reserves = entries.slice(10);
+  const tierName = { 1: 'owed', 2: 'regular', 3: 'other', 4: 'reserve-only' };
+
+  console.log('Sign-ups in rank order:');
+  entries.forEach((e, i) => {
+    const marker = i === 10 ? '  ---------- 10 / 11 ----------\n' : '';
+    const flag = e.late ? '  LATE' : '';
+    console.log(`${marker}  ${String(i + 1).padStart(2)}. ${e.p.name.padEnd(20)} ${tierName[e.tier].padEnd(12)} ${fmtTime(e.s.at)}${flag}   ${e.reason}`);
+  });
+  if (verbose) {
+    console.log('\nParse log:');
+    notes.forEach(n => console.log(`  ${n}`));
+  }
+  if (guests.length) {
+    console.log('\nNot on the sheet (guests):');
+    guests.forEach(g => console.log(`  ${g.name || g.email}  ${fmtTime(g.at)}  ${g.kind}`));
+  }
+  if (unknown.length) {
+    console.log('\nCould not interpret (check by eye):');
+    unknown.forEach(u => console.log(`  ${u}`));
+  }
+  console.log('\nTally to paste:');
+  console.log(`  ${picked.map(e => e.p.short).join(' ')}`);
+  if (reserves.length) console.log(`  reserves ${reserves.map(e => e.p.short).join(' ')}`);
+  console.log(`\nAttendance window: ${cols.length} sessions (${cols[cols.length - 1]?.date} → ${cols[0]?.date})`);
+  if (actualRows) console.log(`Actual players already on sheet for ${sessionDate}: ${actualRows.map(r => byRow.get(r)?.short || r).join(' ')}`);
+
+  if (save) {
+    ledger[sessionDate] = {
+      ...(ledger[sessionDate] || {}),
+      thread: thread.threadId,
+      cutoff: cutoff.toISOString(),
+      signups: entries.map(e => e.row),
+      suggested: { picked: picked.map(e => e.row), reserves: reserves.map(e => e.row) },
+      reasons: Object.fromEntries(entries.map(e => [e.row, `${tierName[e.tier]}${e.late ? ' (late)' : ''}: ${e.reason}`])),
+      guests: guests.map(g => g.name || g.email),
+      log: notes,
+      ...(actualRows ? { actual: actualRows } : {}),
+    };
+    saveLedger(mode, ledger);
+    console.log(`Saved suggestion to ${path.relative(process.cwd(), ledgerPath(mode))} under "${sessionDate}"`);
+  } else {
+    console.log('Not saved (--no-save)');
+  }
+  return { picked, reserves };
+}
+
+// Called from run-all so the trial ledger records who actually played.
+function recordActual(mode, rowVals) {
+  if (mode !== 'mon') return;
+  const { sess2Date } = loadState()[mode] || {};
+  if (!sess2Date) return;
+  const ledger = loadLedger(mode);
+  const rows = rowVals.map(rv => Number(rv.split(':')[0])).filter(Boolean);
+  ledger[sess2Date] = { ...(ledger[sess2Date] || {}), actual: rows };
+  saveLedger(mode, ledger);
+  console.log(`Recorded actual players for ${sess2Date} in trial ledger`);
+}
+
+function pickReport(mode) {
+  const players = loadPlayers(mode);
+  const byRow = new Map(players.map(p => [p.row, p]));
+  const short = (r) => byRow.get(r)?.short || `row${r}`;
+  const ledger = loadLedger(mode);
+  const keys = Object.keys(ledger).filter(parseSheetDate).sort((a, b) => parseSheetDate(a) - parseSheetDate(b));
+  if (!keys.length) { console.log('Trial ledger is empty.'); return; }
+
+  let sessions = 0, matches = 0;
+  for (const k of keys) {
+    const e = ledger[k];
+    console.log(`\n${k}`);
+    if (e.suggested) console.log(`  rule:    ${e.suggested.picked.map(short).join(' ')}${e.suggested.reserves.length ? `   | reserves ${e.suggested.reserves.map(short).join(' ')}` : ''}`);
+    else console.log('  rule:    (pick not run)');
+    if (e.actual) console.log(`  actual:  ${e.actual.map(short).join(' ')}`);
+    else console.log('  actual:  (credit not run yet)');
+    if (e.suggested && e.actual) {
+      sessions++;
+      const ruleOnly = e.suggested.picked.filter(r => !e.actual.includes(r));
+      const actualOnly = e.actual.filter(r => !e.suggested.picked.includes(r));
+      if (!ruleOnly.length && !actualOnly.length) { matches++; console.log('  same 10'); }
+      else {
+        ruleOnly.forEach(r => console.log(`  rule picked, didn't play:  ${byRow.get(r)?.name || r}  — ${e.reasons?.[r] || ''}`));
+        actualOnly.forEach(r => console.log(`  played, rule left out:     ${byRow.get(r)?.name || r}  — ${e.reasons?.[r] || 'not in sign-ups the rule saw'}`));
+      }
+    }
+    if (e.guests?.length) console.log(`  guests seen: ${e.guests.join(', ')}`);
+  }
+  if (sessions) console.log(`\n${matches}/${sessions} sessions where the rule matched the actual 10 exactly.`);
 }
 
 // ─── CLI ───────────────────────────────────────────────────────────────────────
@@ -846,7 +1262,8 @@ if (!mode || !command) {
   console.log('\nCommands: refresh-token, update-page, get-players, search-emails,');
   console.log('          get-thread <id>, read-headers, copy-columns, clear-week,');
   console.log('          write-played <r:v,...>, hide-old, read-sessions,');
-  console.log('          build-email, send-preview, send-email, run-all <r:v,...>');
+  console.log('          build-email, send-preview, send-email, run-all <r:v,...>,');
+  console.log('          pick [--cutoff "YYYY-MM-DD HH:MM"] [--no-save], pick-report (mon only)');
   process.exit(1);
 }
 
@@ -871,6 +1288,8 @@ try {
     case 'send-preview': await sendPreview(mode); break;
     case 'send-email': await sendEmail(mode); break;
     case 'run-all': await runAll(mode, args[0].split(',')); break;
+    case 'pick': await pick(mode, args); break;
+    case 'pick-report': pickReport(mode); break;
     default: console.error(`Unknown command: ${command}`); process.exit(1);
   }
 } catch (e) {

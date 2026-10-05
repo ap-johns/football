@@ -28,16 +28,16 @@ Otherwise:
    ```
 
 3. Show John:
-   - the ranked sign-ups with tier and reason, and the 10 / 11 line,
+   - the ranked sign-ups with tier, reason and attendance, and the 10 / 11 line,
    - the "Could not interpret" lines, so he can check them by eye,
    - the "Tally to paste" lines,
-   - anyone under "Not on the sheet". If that person is really a regular, suggest the
+   - anyone under "Not on the sheet". If that person is really on the sheet, suggest the
      email or name alias to add to `players.mon.json`.
 
 The rule being trialled: reply by 18:00 on the day the list goes out (Tuesday).
-On-time replies rank (1) signed up last week and missed out, (2) regulars = 58%
-attendance over the last 8, 26 or 52 sessions, whichever is highest (signing up on time and being left out counts as attended),
-(3) everyone else; ties by reply time.
-Top 10 play, the rest are reserves. Late replies rank below all on-time replies, first
-come first served. People who only offered to be reserve go last. Thresholds live in
-the `PICK` object in `footy-credit.mjs`.
+On-time replies rank (1) signed up last week and missed out, (2) everyone else by
+reply time. Top 10 play, the rest are reserves. Late replies rank below all on-time
+replies, first come first served. People who only offered to be reserve go last.
+Each line shows attendance over the last 8, 26 and 52 sessions for information only
+(signing up on time and being left out counts as attended); it does not affect the
+ranking. Settings live in the `PICK` object in `footy-credit.mjs`.

@@ -829,16 +829,14 @@ async function runAll(mode, rowVals) {
 //
 // Rule under trial (not published to the group):
 //   Reply by 18:00 on the day the list goes out (normally Tuesday). Everyone who
-//   replies by then is ranked: (1) signed up last week and missed out, (2) regulars
-//   = 58% attendance over the last 8, 26 or 52 sessions, whichever is highest
-//   (signing up on time and being left out counts as attended), (3) everyone else.
-//   Ties by reply time. Top 10 play; the rest are reserves in order. Replies after
+//   replies by then is ranked: (1) signed up last week and missed out, (2) everyone
+//   else, by reply time. Top 10 play; the rest are reserves in order. Replies after
 //   the cut-off rank below every on-time reply. People who only offered to be a
-//   reserve go last.
+//   reserve go last. Attendance over the last 8, 26 and 52 sessions is shown for
+//   information only (signing up on time and being left out counts as attended).
 
 const PICK = {
   cutoffHour: 18,
-  regularPct: 0.58,
   windows: [8, 26, 52],
   organiserEmail: 'thejgs@gmail.com',
   playerRows: [10, 40],
@@ -1062,16 +1060,14 @@ async function attendance(mode, cols) {
   return byRow;
 }
 
-function regularStatus(played) {
-  // Best rate over any window, so a recent dip doesn't drop a long-term regular.
+function attendanceText(played) {
   const wins = PICK.windows.map(n => {
     const slice = played.slice(0, n);
     return { n: slice.length, c: slice.reduce((a, b) => a + b, 0) };
   }).filter(w => w.n > 0);
   const best = wins.reduce((b, w) => (!b || w.c / w.n > b.c / b.n ? w : b), null);
-  const regular = !!best && best.c / best.n >= PICK.regularPct;
   const text = wins.map(w => `${w.c}/${w.n}`).join(', ') + (best ? ` (best ${Math.round(100 * best.c / best.n)}%)` : '');
-  return { regular, text };
+  return text;
 }
 
 function parseCutoff(str, fallback) {
@@ -1133,13 +1129,12 @@ async function pick(mode, args) {
 
   const entries = [...signups.entries()].filter(([, s]) => !s.dropped).map(([row, s]) => {
     const p = byRow.get(row);
-    const { regular, text } = regularStatus(att.get(row) || []);
+    const text = attendanceText(att.get(row) || []);
     const owed = owedRows.has(row);
     const late = s.at > cutoff;
-    const tier = s.reserveOnly ? 4 : owed ? 1 : regular ? 2 : 3;
+    const tier = s.reserveOnly ? 4 : owed ? 1 : 2;
     const reason = s.reserveOnly ? 'offered reserve only'
-      : owed ? `missed out ${prevKey}` + (regular ? `, ${text}` : '')
-      : regular ? `regular ${text}` : `not regular ${text}`;
+      : (owed ? `missed out ${prevKey}, ` : '') + text;
     return { row, p, s, tier, late, reason };
   });
   entries.sort((a, b) =>
@@ -1147,13 +1142,13 @@ async function pick(mode, args) {
     || (a.late ? 0 : (a.tier - b.tier)) || (a.s.at - b.s.at));
 
   const picked = entries.slice(0, 10), reserves = entries.slice(10);
-  const tierName = { 1: 'owed', 2: 'regular', 3: 'other', 4: 'reserve-only' };
+  const tierName = { 1: 'owed', 2: 'on time', 4: 'reserve-only' };
 
   console.log('Sign-ups in rank order:');
   entries.forEach((e, i) => {
     const marker = i === 10 ? '  ---------- 10 / 11 ----------\n' : '';
     const flag = e.late ? '  LATE' : '';
-    console.log(`${marker}  ${String(i + 1).padStart(2)}. ${e.p.name.padEnd(20)} ${tierName[e.tier].padEnd(12)} ${fmtTime(e.s.at)}${flag}   ${e.reason}`);
+    console.log(`${marker}  ${String(i + 1).padStart(2)}. ${e.p.name.padEnd(20)} ${(e.late && e.tier !== 4 ? 'late' : tierName[e.tier]).padEnd(12)} ${fmtTime(e.s.at)}${flag}   ${e.reason}`);
   });
   if (verbose) {
     console.log('\nParse log:');

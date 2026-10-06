@@ -833,14 +833,17 @@ async function runAll(mode, rowVals) {
 //   everyone else, by reply time. How long being left out keeps priority depends on
 //   attendance: see PICK.priorityWeeks. Top 10 play; the rest are reserves in order. Replies after
 //   the cut-off rank below every on-time reply. People who only offered to be a
-//   reserve go last. Attendance over the last 8, 26 and 52 sessions is shown for
-//   information only (signing up on time and being left out counts as attended).
+//   reserve go last. Attendance is a weighted rate over the last 104 sessions, each
+//   session counting half as much per 26 sessions of age (signing up on time and
+//   being left out counts as attended). Counts over 8, 26 and 52 are shown for info.
 
 const PICK = {
   cutoffHour: 18,
-  windows: [8, 26, 52],
-  // Weeks of priority after being left out, by best attendance over the windows.
-  priorityWeeks: [[0.75, 4], [0.5, 3], [0.25, 2], [0, 1]],
+  windows: [8, 26, 52],    // counts shown for info
+  lookback: 104,           // sessions in the weighted rate
+  halfLife: 26,            // a session's weight halves every 26 sessions
+  // Weeks of priority after being left out, by weighted attendance.
+  priorityWeeks: [[0.7, 4], [0.5, 3], [0.25, 2], [0, 1]],
   organiserEmail: 'thejgs@gmail.com',
   playerRows: [10, 40],
 };
@@ -1063,13 +1066,18 @@ async function attendance(mode, cols) {
   return byRow;
 }
 
-function bestRate(played) {
-  const wins = PICK.windows.map(n => played.slice(0, n)).filter(w => w.length);
-  return Math.max(0, ...wins.map(w => w.reduce((a, b) => a + b, 0) / w.length));
+// Recent sessions count more, but a short run can't outweigh a long record.
+function attendanceRate(played) {
+  let w = 0, c = 0;
+  played.slice(0, PICK.lookback).forEach((v, i) => {
+    const k = Math.pow(0.5, i / PICK.halfLife);
+    w += k; c += k * v;
+  });
+  return w ? c / w : 0;
 }
 
 function priorityWeeks(played) {
-  const rate = bestRate(played);
+  const rate = attendanceRate(played);
   return PICK.priorityWeeks.find(([min]) => rate >= min)[1];
 }
 
@@ -1078,9 +1086,7 @@ function attendanceText(played) {
     const slice = played.slice(0, n);
     return { n: slice.length, c: slice.reduce((a, b) => a + b, 0) };
   }).filter(w => w.n > 0);
-  const best = wins.reduce((b, w) => (!b || w.c / w.n > b.c / b.n ? w : b), null);
-  const text = wins.map(w => `${w.c}/${w.n}`).join(', ') + (best ? ` (best ${Math.floor(100 * best.c / best.n)}%)` : '');
-  return text;
+  return wins.map(w => `${w.c}/${w.n}`).join(', ') + ` (${Math.floor(100 * attendanceRate(played))}%)`;
 }
 
 // On-time sign-ups for a ledger week, excluding reserve-only offers.
@@ -1118,7 +1124,7 @@ async function pick(mode, args) {
 
   // Attendance up to (not including) this session.
   const allCols = await sessionColumns(mode);
-  const cols = allCols.filter(c => parseSheetDate(c.date) < parseSheetDate(sessionDate)).slice(0, Math.max(...PICK.windows));
+  const cols = allCols.filter(c => parseSheetDate(c.date) < parseSheetDate(sessionDate)).slice(0, PICK.lookback);
   const att = await attendance(mode, cols);
   const played = new Map([...att].map(([r, a]) => [r, [...a]]));  // before left-out credit
   // Signing up on time and being left out counts as attended, so a keen newcomer
@@ -1196,13 +1202,13 @@ async function pick(mode, args) {
   console.log(`  ${picked.map(e => e.p.short).join(' ')}`);
   if (reserves.length) console.log(`  reserves ${reserves.map(e => e.p.short).join(' ')}`);
   console.log(`\nAttendance window: ${cols.length} sessions (${cols[cols.length - 1]?.date} → ${cols[0]?.date})`);
-  console.log('\nAttendance bands (best of last 8 / 26 / 52, left out counts as attended):');
+  console.log(`\nAttendance bands (weighted over ${PICK.lookback} sessions, half-life ${PICK.halfLife}; left out counts as attended):`);
   const rated = players.map(p => ({ p, a: att.get(p.row) || [] })).filter(x => x.a.some(Boolean))
-    .map(x => ({ ...x, rate: bestRate(x.a) })).sort((x, y) => y.rate - x.rate);
+    .map(x => ({ ...x, rate: attendanceRate(x.a) })).sort((x, y) => y.rate - x.rate);
   for (let b = 9; b >= 0; b--) {
     const inBand = rated.filter(x => Math.min(9, Math.floor(x.rate * 10)) === b);
     const label = `${b * 10}-${b === 9 ? 100 : b * 10 + 9}%`.padStart(8);
-    console.log(`  ${label}  ${inBand.map(x => `${x.p.name} ${attendanceText(x.a).replace(/ \(best (\d+%)\)/, ' ($1)')}`).join(' · ') || '-'}`);
+    console.log(`  ${label}  ${inBand.map(x => `${x.p.name} ${attendanceText(x.a)}`).join(' · ') || '-'}`);
   }
   if (actualRows) console.log(`Actual players already on sheet for ${sessionDate}: ${actualRows.map(r => byRow.get(r)?.short || r).join(' ')}`);
 

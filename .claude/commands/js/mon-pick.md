@@ -38,9 +38,10 @@ Otherwise:
 
 The rule being trialled: reply by 18:00 on the day the list goes out (Tuesday).
 On-time replies rank (1) left out recently and not played since, (2) everyone else
-by reply time. Being left out gives priority for 1-4 weeks depending on best
-attendance over 8/26/52 sessions: 75%+ 4 weeks, 50%+ 3, 25%+ 2, otherwise 1. Top 10 play, the rest are reserves. Late replies rank below all on-time
+by reply time. Being left out gives priority for 1-4 weeks depending on weighted
+attendance: 70%+ 4 weeks, 50%+ 3, 25%+ 2, otherwise 1. The weighted rate covers the
+last 104 sessions, each counting half as much per 26 sessions of age. Top 10 play, the rest are reserves. Late replies rank below all on-time
 replies, first come first served. People who only offered to be reserve go last.
-Each line shows attendance over the last 8, 26 and 52 sessions for information only
-(signing up on time and being left out counts as attended); it does not affect the
-ranking. Settings live in the `PICK` object in `footy-credit.mjs`.
+Each line shows the weighted rate plus counts over the last 8, 26 and 52 sessions
+(signing up on time and being left out counts as attended); attendance only sets the
+priority weeks, not the order. Settings live in the `PICK` object in `footy-credit.mjs`.

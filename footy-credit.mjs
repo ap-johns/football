@@ -829,7 +829,7 @@ async function runAll(mode, rowVals) {
 //
 // Rule under trial (not published to the group):
 //   Reply by 18:00 on the day the list goes out (normally Tuesday). Everyone who
-//   replies by then is ranked: (1) left out recently and not played since, (2)
+//   replies by then is ranked: (1) left out within their priority weeks, (2)
 //   everyone else, by reply time. How long being left out keeps priority depends on
 //   attendance: see PICK.priorityWeeks. Top 10 play; the rest are reserves in order. Replies after
 //   the cut-off rank below every on-time reply. People who only offered to be a
@@ -1126,7 +1126,6 @@ async function pick(mode, args) {
   const allCols = await sessionColumns(mode);
   const cols = allCols.filter(c => parseSheetDate(c.date) < parseSheetDate(sessionDate)).slice(0, PICK.lookback);
   const att = await attendance(mode, cols);
-  const played = new Map([...att].map(([r, a]) => [r, [...a]]));  // before left-out credit
   // Signing up on time and being left out counts as attended, so a keen newcomer
   // isn't stuck alternating between owed and bumped.
   const ledger = loadLedger(mode);
@@ -1142,9 +1141,9 @@ async function pick(mode, args) {
   const thisCol = allCols.find(c => c.date === sessionDate);
   const actualRows = thisCol ? [...(await attendance(mode, [thisCol])).entries()].filter(([, v]) => v[0]).map(([r]) => r) : null;
 
-  // Owed: left out within their priority weeks and not played since. Prefer the
-  // actual outcome; fall back to the rule's own reserves if the credit run hasn't
-  // recorded actuals.
+  // Owed: left out within their priority weeks, whether or not they've played
+  // since. Prefer the actual outcome; fall back to the rule's own reserves if the
+  // credit run hasn't recorded actuals.
   const weekMs = 7 * 24 * 3600 * 1000;
   const owedFrom = new Map();  // row -> { date, weeks }
   Object.keys(ledger)
@@ -1156,10 +1155,8 @@ async function pick(mode, args) {
       const ago = Math.round((parseSheetDate(sessionDate) - parseSheetDate(k)) / weekMs);
       leftOut.forEach(r => {
         if (owedFrom.has(r)) return;  // most recent left-out week wins
-        const since = cols.findIndex(c => parseSheetDate(c.date) <= parseSheetDate(k));
-        const playedSince = (played.get(r) || []).slice(0, since < 0 ? cols.length : since).some(Boolean);
         const weeks = priorityWeeks(att.get(r) || []);
-        if (!playedSince && ago <= weeks) owedFrom.set(r, { date: k, weeks });
+        if (ago <= weeks) owedFrom.set(r, { date: k, weeks });
       });
     });
 

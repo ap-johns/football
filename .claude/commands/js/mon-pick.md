@@ -37,9 +37,9 @@ Otherwise:
      email or name alias to add to `players.mon.json`.
 
 The rule being trialled: reply by 18:00 on the day the list goes out (Tuesday).
-On-time replies rank (1) left out recently and not played since, (2) everyone else
-by reply time. Being left out gives priority for 1-4 weeks depending on weighted
-attendance: 60%+ 4 weeks, 50%+ 3, 30%+ 2, otherwise 1. The weighted rate covers the
+On-time replies rank (1) left out within their priority weeks, (2) everyone else
+by reply time. Being left out gives priority every week for 1-4 weeks, even after
+playing, depending on weighted attendance: 60%+ 4 weeks, 50%+ 3, 30%+ 2, otherwise 1. The weighted rate covers the
 last 104 sessions, each counting half as much per 26 sessions of age. Top 10 play, the rest are reserves. Late replies rank below all on-time
 replies, first come first served. People who only offered to be reserve go last.
 Each line shows the weighted rate plus counts over the last 8, 26 and 52 sessions

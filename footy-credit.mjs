@@ -843,7 +843,7 @@ const PICK = {
   lookback: 104,           // sessions in the weighted rate
   halfLife: 26,            // a session's weight halves every 26 sessions
   // Weeks of priority after being left out, by weighted attendance.
-  priorityWeeks: [[0.7, 4], [0.5, 3], [0.25, 2], [0, 1]],
+  priorityWeeks: [[0.6, 4], [0.5, 3], [0.3, 2], [0, 1]],
   organiserEmail: 'thejgs@gmail.com',
   playerRows: [10, 40],
 };

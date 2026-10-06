@@ -297,5 +297,70 @@
       29,
       33
     ]
+  },
+  "12 Oct 26": {
+    "thread": "1a110152aee98ba8",
+    "cutoff": "2026-10-06T17:00:00.000Z",
+    "signups": [
+      34,
+      12,
+      22,
+      21,
+      10,
+      27,
+      16,
+      32,
+      26,
+      35,
+      11,
+      28
+    ],
+    "suggested": {
+      "picked": [
+        34,
+        12,
+        22,
+        21,
+        10,
+        27,
+        16,
+        32,
+        26,
+        35
+      ],
+      "reserves": [
+        11,
+        28
+      ]
+    },
+    "reasons": {
+      "10": "on time: 6/8, 22/26, 38/52 (best 85%)",
+      "11": "on time: 4/8, 17/26, 35/52 (best 67%)",
+      "12": "on time: 7/8, 25/26, 51/52 (best 98%)",
+      "16": "on time: 6/8, 21/26, 42/52 (best 81%)",
+      "21": "on time: 4/8, 15/26, 23/52 (best 58%)",
+      "22": "on time: 2/8, 14/26, 31/52 (best 60%)",
+      "26": "on time: 7/8, 19/26, 41/52 (best 88%)",
+      "27": "on time: 3/8, 17/26, 36/52 (best 69%)",
+      "28": "on time: 1/8, 1/26, 5/52 (best 13%)",
+      "32": "on time: 3/8, 9/26, 22/52 (best 42%)",
+      "34": "owed: missed out 5 Oct 26 (priority 3 wks), 4/8, 9/26, 11/52 (best 50%)",
+      "35": "on time: 2/8, 12/26, 17/52 (best 46%)"
+    },
+    "guests": [],
+    "log": [
+      "Tue 6 Oct, 08:19  + John Stirling  [organiser]",
+      "Tue 6 Oct, 08:20  + Alasdair Barnett  [reply]",
+      "Tue 6 Oct, 08:20  + Alex L  [reply]",
+      "Tue 6 Oct, 08:20  + Andy Rutter  [reply]",
+      "Tue 6 Oct, 08:20  + Andy W  [reply]",
+      "Tue 6 Oct, 08:23  + Richard Dexter  [reply]",
+      "Tue 6 Oct, 08:32  + Ciaran McAleer  [reply]",
+      "Tue 6 Oct, 09:38  + Steve Hughes  [reply]",
+      "Tue 6 Oct, 09:38  + Greg Rudd  [reply]",
+      "Tue 6 Oct, 09:53  + Hossam  [reply]",
+      "Tue 6 Oct, 11:18  + Rob Saunders  [reply]",
+      "Tue 6 Oct, 11:44  + Fin Miller  [reply]"
+    ]
   }
 }

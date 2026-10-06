@@ -31,12 +31,15 @@ Otherwise:
    - the ranked sign-ups with tier, reason and attendance, and the 10 / 11 line,
    - the "Could not interpret" lines, so he can check them by eye,
    - the "Tally to paste" lines,
+   - the "Attendance bands" table, as a markdown table (band | players with
+     last 8 / 26 / 52), plus the weeks of priority each band gets,
    - anyone under "Not on the sheet". If that person is really on the sheet, suggest the
      email or name alias to add to `players.mon.json`.
 
 The rule being trialled: reply by 18:00 on the day the list goes out (Tuesday).
-On-time replies rank (1) signed up last week and missed out, (2) everyone else by
-reply time. Top 10 play, the rest are reserves. Late replies rank below all on-time
+On-time replies rank (1) left out recently and not played since, (2) everyone else
+by reply time. Being left out gives priority for 1-4 weeks depending on best
+attendance over 8/26/52 sessions: 75%+ 4 weeks, 50%+ 3, 25%+ 2, otherwise 1. Top 10 play, the rest are reserves. Late replies rank below all on-time
 replies, first come first served. People who only offered to be reserve go last.
 Each line shows attendance over the last 8, 26 and 52 sessions for information only
 (signing up on time and being left out counts as attended); it does not affect the

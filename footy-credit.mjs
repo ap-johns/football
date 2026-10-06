@@ -829,8 +829,9 @@ async function runAll(mode, rowVals) {
 //
 // Rule under trial (not published to the group):
 //   Reply by 18:00 on the day the list goes out (normally Tuesday). Everyone who
-//   replies by then is ranked: (1) signed up last week and missed out, (2) everyone
-//   else, by reply time. Top 10 play; the rest are reserves in order. Replies after
+//   replies by then is ranked: (1) left out recently and not played since, (2)
+//   everyone else, by reply time. How long being left out keeps priority depends on
+//   attendance: see PICK.priorityWeeks. Top 10 play; the rest are reserves in order. Replies after
 //   the cut-off rank below every on-time reply. People who only offered to be a
 //   reserve go last. Attendance over the last 8, 26 and 52 sessions is shown for
 //   information only (signing up on time and being left out counts as attended).
@@ -838,6 +839,8 @@ async function runAll(mode, rowVals) {
 const PICK = {
   cutoffHour: 18,
   windows: [8, 26, 52],
+  // Weeks of priority after being left out, by best attendance over the windows.
+  priorityWeeks: [[0.75, 4], [0.5, 3], [0.25, 2], [0, 1]],
   organiserEmail: 'thejgs@gmail.com',
   playerRows: [10, 40],
 };
@@ -1060,14 +1063,29 @@ async function attendance(mode, cols) {
   return byRow;
 }
 
+function bestRate(played) {
+  const wins = PICK.windows.map(n => played.slice(0, n)).filter(w => w.length);
+  return Math.max(0, ...wins.map(w => w.reduce((a, b) => a + b, 0) / w.length));
+}
+
+function priorityWeeks(played) {
+  const rate = bestRate(played);
+  return PICK.priorityWeeks.find(([min]) => rate >= min)[1];
+}
+
 function attendanceText(played) {
   const wins = PICK.windows.map(n => {
     const slice = played.slice(0, n);
     return { n: slice.length, c: slice.reduce((a, b) => a + b, 0) };
   }).filter(w => w.n > 0);
   const best = wins.reduce((b, w) => (!b || w.c / w.n > b.c / b.n ? w : b), null);
-  const text = wins.map(w => `${w.c}/${w.n}`).join(', ') + (best ? ` (best ${Math.round(100 * best.c / best.n)}%)` : '');
+  const text = wins.map(w => `${w.c}/${w.n}`).join(', ') + (best ? ` (best ${Math.floor(100 * best.c / best.n)}%)` : '');
   return text;
+}
+
+// On-time sign-ups for a ledger week, excluding reserve-only offers.
+function onTime(e) {
+  return (e.signups || []).filter(r => !/^reserve-only|\(late\)/.test(e.reasons?.[r] || ''));
 }
 
 function parseCutoff(str, fallback) {
@@ -1102,13 +1120,14 @@ async function pick(mode, args) {
   const allCols = await sessionColumns(mode);
   const cols = allCols.filter(c => parseSheetDate(c.date) < parseSheetDate(sessionDate)).slice(0, Math.max(...PICK.windows));
   const att = await attendance(mode, cols);
+  const played = new Map([...att].map(([r, a]) => [r, [...a]]));  // before left-out credit
   // Signing up on time and being left out counts as attended, so a keen newcomer
   // isn't stuck alternating between owed and bumped.
   const ledger = loadLedger(mode);
   cols.forEach((c, i) => {
     const e = ledger[c.date];
     if (!e?.signups) return;
-    e.signups.filter(r => !/^reserve-only|\(late\)/.test(e.reasons?.[r] || '')).forEach(r => {
+    onTime(e).forEach(r => {
       const a = att.get(r);
       if (a && !a[i]) a[i] = 1;
     });
@@ -1117,24 +1136,35 @@ async function pick(mode, args) {
   const thisCol = allCols.find(c => c.date === sessionDate);
   const actualRows = thisCol ? [...(await attendance(mode, [thisCol])).entries()].filter(([, v]) => v[0]).map(([r]) => r) : null;
 
-  // Owed: signed up last week and didn't play. Prefer the actual outcome; fall
-  // back to the rule's own reserves if the credit run hasn't recorded actuals.
-  const prevKey = Object.keys(ledger)
+  // Owed: left out within their priority weeks and not played since. Prefer the
+  // actual outcome; fall back to the rule's own reserves if the credit run hasn't
+  // recorded actuals.
+  const weekMs = 7 * 24 * 3600 * 1000;
+  const owedFrom = new Map();  // row -> { date, weeks }
+  Object.keys(ledger)
     .filter(k => parseSheetDate(k) && parseSheetDate(k) < parseSheetDate(sessionDate))
-    .sort((a, b) => parseSheetDate(b) - parseSheetDate(a))[0];
-  const prev = prevKey ? ledger[prevKey] : null;
-  const owedRows = new Set(
-    prev ? (prev.actual ? (prev.signups || []).filter(r => !prev.actual.includes(r)) : (prev.suggested?.reserves || [])) : []
-  );
+    .sort((a, b) => parseSheetDate(b) - parseSheetDate(a))
+    .forEach(k => {
+      const e = ledger[k];
+      const leftOut = onTime(e).filter(r => e.actual ? !e.actual.includes(r) : (e.suggested?.reserves || []).includes(r));
+      const ago = Math.round((parseSheetDate(sessionDate) - parseSheetDate(k)) / weekMs);
+      leftOut.forEach(r => {
+        if (owedFrom.has(r)) return;  // most recent left-out week wins
+        const since = cols.findIndex(c => parseSheetDate(c.date) <= parseSheetDate(k));
+        const playedSince = (played.get(r) || []).slice(0, since < 0 ? cols.length : since).some(Boolean);
+        const weeks = priorityWeeks(att.get(r) || []);
+        if (!playedSince && ago <= weeks) owedFrom.set(r, { date: k, weeks });
+      });
+    });
 
   const entries = [...signups.entries()].filter(([, s]) => !s.dropped).map(([row, s]) => {
     const p = byRow.get(row);
     const text = attendanceText(att.get(row) || []);
-    const owed = owedRows.has(row);
+    const owed = owedFrom.get(row);
     const late = s.at > cutoff;
     const tier = s.reserveOnly ? 4 : owed ? 1 : 2;
     const reason = s.reserveOnly ? 'offered reserve only'
-      : (owed ? `missed out ${prevKey}, ` : '') + text;
+      : (owed ? `missed out ${owed.date} (priority ${owed.weeks} wk${owed.weeks > 1 ? 's' : ''}), ` : '') + text;
     return { row, p, s, tier, late, reason };
   });
   entries.sort((a, b) =>
@@ -1166,6 +1196,14 @@ async function pick(mode, args) {
   console.log(`  ${picked.map(e => e.p.short).join(' ')}`);
   if (reserves.length) console.log(`  reserves ${reserves.map(e => e.p.short).join(' ')}`);
   console.log(`\nAttendance window: ${cols.length} sessions (${cols[cols.length - 1]?.date} → ${cols[0]?.date})`);
+  console.log('\nAttendance bands (best of last 8 / 26 / 52, left out counts as attended):');
+  const rated = players.map(p => ({ p, a: att.get(p.row) || [] })).filter(x => x.a.some(Boolean))
+    .map(x => ({ ...x, rate: bestRate(x.a) })).sort((x, y) => y.rate - x.rate);
+  for (let b = 9; b >= 0; b--) {
+    const inBand = rated.filter(x => Math.min(9, Math.floor(x.rate * 10)) === b);
+    const label = `${b * 10}-${b === 9 ? 100 : b * 10 + 9}%`.padStart(8);
+    console.log(`  ${label}  ${inBand.map(x => `${x.p.name} ${attendanceText(x.a).replace(/ \(best (\d+%)\)/, ' ($1)')}`).join(' · ') || '-'}`);
+  }
   if (actualRows) console.log(`Actual players already on sheet for ${sessionDate}: ${actualRows.map(r => byRow.get(r)?.short || r).join(' ')}`);
 
   if (save) {

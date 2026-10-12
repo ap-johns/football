@@ -43,7 +43,17 @@ Steps:
    payer's row). If `$ARGUMENTS` says e.g. "charge andy r for mark r", give Andy
    Rutter value 2.
 
-5. Run everything in one shot:
+5. Commit any uncommitted `mon pick` changes first, so the push in the next step
+   sends them too. Check:
+   ```
+   git status --short -- footy-credit.mjs players.mon.json .claude/commands data
+   ```
+   If anything is listed, look at `git diff` and commit those paths in their own commit
+   with a short message describing the change (e.g. "Monday pick: …"), ending with
+   the usual Co-Authored-By line. Don't commit anything else. Skip this if nothing
+   is listed.
+
+6. Run everything in one shot:
    ```
    node footy-credit.mjs fri run-all <row:val,...>
    ```
@@ -52,7 +62,7 @@ Steps:
    sends the preview to thejgs@gmail.com, sends to kkfrifooty@googlegroups.com,
    and rebuilds and pushes the credit pages.
 
-6. Report back: the session date, the players written (grouped by team if teams
+7. Report back: the session date, any pick commit made in step 5, the players written (grouped by team if teams
    were posted), anyone skipped and why, which message you took the list from, and
    anything odd such as a player count that isn't 10 or a swap posted after a
    previous credit run.

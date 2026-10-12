@@ -829,13 +829,14 @@ async function runAll(mode, rowVals) {
 //
 // Rule under trial (not published to the group):
 //   Reply by 18:00 on the day the list goes out (normally Tuesday). Everyone who
-//   replies by then is ranked: (1) left out within their priority weeks, (2)
-//   everyone else, by reply time. How long being left out keeps priority depends on
-//   attendance: see PICK.priorityWeeks. Top 10 play; the rest are reserves in order. Replies after
-//   the cut-off rank below every on-time reply. People who only offered to be a
-//   reserve go last. Attendance is a weighted rate over the last 104 sessions, each
-//   session counting half as much per 26 sessions of age (signing up on time and
-//   being left out counts as attended). Counts over 8, 26 and 52 are shown for info.
+//   replies by then is ranked: (1) missed out within their priority weeks, (2)
+//   everyone else, by reply time. Missed out = on the reserves line of the
+//   organiser's last list and didn't play. How long it keeps priority depends on
+//   attendance: see PICK.priorityWeeks. Top 10 play; the rest are reserves in
+//   order. Replies after the cut-off rank below every on-time reply. People who
+//   only offered to be a reserve go last. Attendance is a weighted rate over the
+//   last 104 sessions, each session counting half as much per 26 sessions of age
+//   (missing out counts as attended). Counts over 8, 26 and 52 are shown for info.
 
 const PICK = {
   cutoffHour: 18,
@@ -969,7 +970,8 @@ async function fetchThreadMessages(threadId) {
   return (data.messages || []).map(msg => {
     const hdr = (n) => msg.payload?.headers?.find(h => h.name === n)?.value || '';
     const { name, email } = parseFrom(hdr('From'));
-    return { id: msg.id, fromName: name, fromEmail: email, date: new Date(hdr('Date')), lines: contentLines(getBodyAny(msg.payload)) };
+    const body = getBodyAny(msg.payload);
+    return { id: msg.id, fromName: name, fromEmail: email, date: new Date(hdr('Date')), body, lines: contentLines(body) };
   }).sort((a, b) => a.date - b.date);
 }
 
@@ -1089,9 +1091,40 @@ function attendanceText(played) {
   return wins.map(w => `${w.c}/${w.n}`).join(', ') + ` (${Math.floor(100 * attendanceRate(played))}%)`;
 }
 
-// On-time sign-ups for a ledger week, excluding reserve-only offers.
-function onTime(e) {
-  return (e.signups || []).filter(r => !/^reserve-only|\(late\)/.test(e.reasons?.[r] || ''));
+// Reserves on the organiser's last list in the thread. The list is often an
+// inline edit of a quoted earlier list, so quote markers are stripped; lists
+// quoted under someone else's "On ... wrote:" are ignored.
+function finalReserves(messages, players) {
+  let reserves = [];
+  for (const m of messages.filter(m => m.fromEmail === PICK.organiserEmail)) {
+    let rows = [], after = false;
+    for (const raw of (m.body || '').split(/\r?\n/)) {
+      const line = raw.replace(/^[>\s]+/, '').trim();
+      if (!line) continue;
+      if (/^on .+wrote:?$/i.test(line) && !line.toLowerCase().includes(PICK.organiserEmail)) break;
+      if (/^reserves?:?$/i.test(line)) { after = true; continue; }
+      const p = findByToken(players, line);
+      if (p) { rows.push({ row: p.row, reserve: after }); continue; }
+      if (rows.length >= 5) break;   // end of the newest list
+      rows = []; after = false;       // stray text before the list
+    }
+    if (rows.length >= 5) reserves = rows.filter(r => r.reserve).map(r => r.row);
+  }
+  return reserves;
+}
+
+// Missed out = on the reserves line of the organiser's last list and didn't play.
+// Worked out once per finished week (needs the sheet) and kept in the ledger.
+async function ledgerMissedOut(ledger, cols, att, players) {
+  let changed = false;
+  for (const [i, c] of cols.entries()) {
+    const e = ledger[c.date];
+    if (!e?.thread || e.missedOut) continue;
+    const reserves = finalReserves(await fetchThreadMessages(e.thread), players);
+    e.missedOut = reserves.filter(r => !att.get(r)?.[i]);
+    changed = true;
+  }
+  return changed;
 }
 
 function parseCutoff(str, fallback) {
@@ -1126,24 +1159,20 @@ async function pick(mode, args) {
   const allCols = await sessionColumns(mode);
   const cols = allCols.filter(c => parseSheetDate(c.date) < parseSheetDate(sessionDate)).slice(0, PICK.lookback);
   const att = await attendance(mode, cols);
-  // Signing up on time and being left out counts as attended, so a keen newcomer
-  // isn't stuck alternating between owed and bumped.
+  // Missing out counts as attended, so a keen newcomer isn't stuck alternating
+  // between owed and bumped.
   const ledger = loadLedger(mode);
-  cols.forEach((c, i) => {
-    const e = ledger[c.date];
-    if (!e?.signups) return;
-    onTime(e).forEach(r => {
-      const a = att.get(r);
-      if (a && !a[i]) a[i] = 1;
-    });
-  });
+  if (await ledgerMissedOut(ledger, cols, att, players)) saveLedger(mode, ledger);
+  cols.forEach((c, i) => (ledger[c.date]?.missedOut || []).forEach(r => {
+    const a = att.get(r);
+    if (a) a[i] = 1;
+  }));
   // If this session is already on the sheet (backfill), take the actual 10 from it.
   const thisCol = allCols.find(c => c.date === sessionDate);
   const actualRows = thisCol ? [...(await attendance(mode, [thisCol])).entries()].filter(([, v]) => v[0]).map(([r]) => r) : null;
 
-  // Owed: left out within their priority weeks, whether or not they've played
-  // since. Prefer the actual outcome; fall back to the rule's own reserves if the
-  // credit run hasn't recorded actuals.
+  // Owed: missed out within their priority weeks, whether or not they've played
+  // since.
   const weekMs = 7 * 24 * 3600 * 1000;
   const owedFrom = new Map();  // row -> { date, weeks }
   Object.keys(ledger)
@@ -1151,7 +1180,7 @@ async function pick(mode, args) {
     .sort((a, b) => parseSheetDate(b) - parseSheetDate(a))
     .forEach(k => {
       const e = ledger[k];
-      const leftOut = onTime(e).filter(r => e.actual ? !e.actual.includes(r) : (e.suggested?.reserves || []).includes(r));
+      const leftOut = e.missedOut || [];
       const ago = Math.round((parseSheetDate(sessionDate) - parseSheetDate(k)) / weekMs);
       leftOut.forEach(r => {
         if (owedFrom.has(r)) return;  // most recent left-out week wins

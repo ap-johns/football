@@ -938,7 +938,8 @@ function findByToken(players, token) {
 }
 
 function classifyReply(lines) {
-  const s = lines.slice(0, 3).join(' ').toLowerCase();
+  // "Sent from my iPhone" can be glued to the reply ("YesSent from my iPhone").
+  const s = lines.slice(0, 3).join(' ').toLowerCase().replace(/sent from my \w+/g, ' ');
   if (!s.trim()) return 'empty';
   if (/reacted via gmail/.test(s)) return 'ignore';
   if (/\b(sorry|drop|pull(ing)? out|can'?t|cannot|unable|away|sit this one out|not available|have to miss)\b/.test(s)) return 'drop';
@@ -1091,9 +1092,10 @@ function attendanceText(played) {
   return wins.map(w => `${w.c}/${w.n}`).join(', ') + ` (${Math.floor(100 * attendanceRate(played))}%)`;
 }
 
-// Reserves on the organiser's last list in the thread. The list is often an
-// inline edit of a quoted earlier list, so quote markers are stripped; lists
-// quoted under someone else's "On ... wrote:" are ignored.
+// Reserves on the organiser's last list in the thread that has a reserves line
+// (later teams posts don't). The list is often an inline edit of a quoted earlier
+// list, so quote markers are stripped; lists quoted under someone else's
+// "On ... wrote:" are ignored.
 function finalReserves(messages, players) {
   let reserves = [];
   for (const m of messages.filter(m => m.fromEmail === PICK.organiserEmail)) {
@@ -1101,14 +1103,14 @@ function finalReserves(messages, players) {
     for (const raw of (m.body || '').split(/\r?\n/)) {
       const line = raw.replace(/^[>\s]+/, '').trim();
       if (!line) continue;
-      if (/^on .+wrote:?$/i.test(line) && !line.toLowerCase().includes(PICK.organiserEmail)) break;
+      if (/^on .+(wrote:?|<[^>]+@[^>]+>,?)$/i.test(line) && !line.toLowerCase().includes(PICK.organiserEmail)) break;
       if (/^reserves?:?$/i.test(line)) { after = true; continue; }
       const p = findByToken(players, line);
       if (p) { rows.push({ row: p.row, reserve: after }); continue; }
       if (rows.length >= 5) break;   // end of the newest list
       rows = []; after = false;       // stray text before the list
     }
-    if (rows.length >= 5) reserves = rows.filter(r => r.reserve).map(r => r.row);
+    if (rows.length >= 5 && after) reserves = rows.filter(r => r.reserve).map(r => r.row);
   }
   return reserves;
 }

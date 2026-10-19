@@ -446,6 +446,18 @@
       "Tue 13 Oct, 08:25  + Andy W  [reply]",
       "Tue 13 Oct, 08:28  + Andy Rutter  [reply]",
       "Tue 13 Oct, 09:12  + Ciaran McAleer  [reply]"
+    ],
+    "actual": [
+      12,
+      35,
+      28,
+      22,
+      11,
+      16,
+      21,
+      26,
+      32,
+      10
     ]
   }
 }

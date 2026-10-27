@@ -815,7 +815,7 @@ async function runAll(mode, rowVals) {
   await readHeaders(mode);
   await copyColumns(mode);
   await writePlayed(mode, rowVals);
-  recordActual(mode, rowVals);
+  await recordActual(mode, rowVals);
   await hideOld(mode);
   await readSessions(mode);
   buildEmail(mode);
@@ -1260,16 +1260,28 @@ async function pick(mode, args) {
   return { picked, reserves };
 }
 
-// Called from run-all so the trial ledger records who actually played.
-function recordActual(mode, rowVals) {
+// Called from run-all so the trial ledger records who actually played. Also keeps
+// the sign-up thread, so the week's reserves count as missed out even when
+// `mon pick` wasn't run that week.
+async function recordActual(mode, rowVals) {
   if (mode !== 'mon') return;
   const { sess2Date } = loadState()[mode] || {};
   if (!sess2Date) return;
   const ledger = loadLedger(mode);
   const rows = rowVals.map(rv => Number(rv.split(':')[0])).filter(Boolean);
-  ledger[sess2Date] = { ...(ledger[sess2Date] || {}), actual: rows };
+  const entry = { ...(ledger[sess2Date] || {}), actual: rows };
+  if (!entry.thread) {
+    try {
+      const t = await findSignupThread(mode);
+      if (fmtSheetDate(nextMonday(t.date)) === sess2Date) entry.thread = t.threadId;
+      else console.log(`Sign-up thread "${t.subject}" isn't for ${sess2Date}; thread not recorded`);
+    } catch (e) {
+      console.log(`Couldn't find sign-up thread (${e.message}); thread not recorded`);
+    }
+  }
+  ledger[sess2Date] = entry;
   saveLedger(mode, ledger);
-  console.log(`Recorded actual players for ${sess2Date} in trial ledger`);
+  console.log(`Recorded actual players${entry.thread ? ' and thread' : ''} for ${sess2Date} in trial ledger`);
 }
 
 function pickReport(mode) {

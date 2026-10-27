@@ -458,20 +458,159 @@
       26,
       32,
       10
+    ],
+    "missedOut": [
+      27,
+      17
     ]
   },
   "26 Oct 26": {
     "actual": [
+      10,
+      11,
+      12,
+      16,
+      17,
+      18,
+      22,
+      29,
+      33,
+      35
+    ],
+    "thread": "1a158234bbd990aa",
+    "cutoff": "2026-10-20T17:00:00.000Z",
+    "signups": [
+      17,
+      35,
       12,
       11,
       10,
       16,
-      17,
-      35,
       18,
       22,
       33,
-      29
+      29,
+      32
+    ],
+    "suggested": {
+      "picked": [
+        17,
+        35,
+        12,
+        11,
+        10,
+        16,
+        18,
+        22,
+        33,
+        29
+      ],
+      "reserves": [
+        32
+      ]
+    },
+    "reasons": {
+      "10": "on time: 6/8, 23/26, 39/52 (73%)",
+      "11": "on time: 5/8, 17/26, 37/52 (70%)",
+      "12": "on time: 8/8, 25/26, 51/52 (97%)",
+      "16": "on time: 7/8, 22/26, 43/52 (82%)",
+      "17": "owed: missed out 19 Oct 26 (priority 4 wks), 5/8, 17/26, 37/52 (65%)",
+      "18": "on time: 0/8, 6/26, 16/52 (34%)",
+      "22": "on time: 4/8, 14/26, 32/52 (60%)",
+      "29": "on time: 6/8, 8/26, 16/52 (30%)",
+      "32": "on time: 4/8, 11/26, 23/52 (39%)",
+      "33": "on time: 6/8, 8/26, 12/52 (37%)",
+      "35": "owed: missed out 12 Oct 26 (priority 2 wks), 5/8, 13/26, 19/52 (47%)"
+    },
+    "guests": [],
+    "log": [
+      "Tue 20 Oct, 08:07  + John Stirling  [organiser]",
+      "Tue 20 Oct, 08:08  + Rob Saunders  [reply]",
+      "Tue 20 Oct, 08:08  + Andy Rutter  [reply]",
+      "Tue 20 Oct, 08:17  + Richard Dexter  [reply]",
+      "Tue 20 Oct, 08:26  + Michael Scott  [reply]",
+      "Tue 20 Oct, 08:27  + Hossam  [reply]",
+      "Tue 20 Oct, 08:45  + Eugene  [reply]",
+      "Tue 20 Oct, 08:55  + Alasdair Barnett  [reply]",
+      "Tue 20 Oct, 10:00  + Luke Harnwell  [reply]",
+      "Tue 20 Oct, 10:03  + John Harnwell  [reply]",
+      "Tue 20 Oct, 10:36  + Ciaran McAleer  [reply]"
+    ],
+    "missedOut": [
+      32
+    ]
+  },
+  "2 Nov 26": {
+    "thread": "1a17c5fd31183571",
+    "cutoff": "2026-10-27T18:00:00.000Z",
+    "signups": [
+      27,
+      17,
+      32,
+      12,
+      22,
+      16,
+      35,
+      21,
+      26,
+      10,
+      29,
+      33,
+      11,
+      28
+    ],
+    "suggested": {
+      "picked": [
+        27,
+        17,
+        32,
+        12,
+        22,
+        16,
+        35,
+        21,
+        26,
+        10
+      ],
+      "reserves": [
+        29,
+        33,
+        11,
+        28
+      ]
+    },
+    "reasons": {
+      "10": "on time: 6/8, 23/26, 39/52 (74%)",
+      "11": "on time: 6/8, 17/26, 37/52 (71%)",
+      "12": "on time: 8/8, 25/26, 51/52 (97%)",
+      "16": "on time: 8/8, 22/26, 43/52 (82%)",
+      "17": "owed: missed out 19 Oct 26 (priority 4 wks), 6/8, 18/26, 38/52 (66%)",
+      "21": "on time: 5/8, 15/26, 25/52 (50%)",
+      "22": "on time: 5/8, 14/26, 32/52 (61%)",
+      "26": "on time: 7/8, 18/26, 40/52 (74%)",
+      "27": "owed: missed out 19 Oct 26 (priority 4 wks), 4/8, 16/26, 35/52 (60%)",
+      "28": "on time: 3/8, 3/26, 7/52 (15%)",
+      "29": "on time: 6/8, 9/26, 17/52 (32%)",
+      "32": "owed: missed out 26 Oct 26 (priority 2 wks), 5/8, 12/26, 23/52 (41%)",
+      "33": "on time: 6/8, 9/26, 13/52 (39%)",
+      "35": "on time: 6/8, 14/26, 20/52 (49%)"
+    },
+    "guests": [],
+    "log": [
+      "Tue 27 Oct, 08:00  + John Stirling  [organiser]",
+      "Tue 27 Oct, 08:01  + Alasdair Barnett  [reply]",
+      "Tue 27 Oct, 08:02  + Andy W  [reply]",
+      "Tue 27 Oct, 08:06  + Richard Dexter  [reply]",
+      "Tue 27 Oct, 08:09  + Hossam  [reply]",
+      "Tue 27 Oct, 08:12  + Michael Scott  [reply]",
+      "Tue 27 Oct, 08:13  + Alex L  [reply]",
+      "Tue 27 Oct, 08:15  + Steve Hughes  [reply]",
+      "Tue 27 Oct, 08:18  + Ciaran McAleer  [reply]",
+      "Tue 27 Oct, 09:10  + Andy Rutter  [reply]",
+      "Tue 27 Oct, 09:13  + John Harnwell  [reply]",
+      "Tue 27 Oct, 09:13  + Luke Harnwell  [reply]",
+      "Tue 27 Oct, 09:19  + Rob Saunders  [reply]",
+      "Tue 27 Oct, 10:34  + Fin Miller  [reply]"
     ]
   }
 }

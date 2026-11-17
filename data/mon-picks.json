@@ -754,7 +754,9 @@
       15,
       34,
       17,
-      29
+      29,
+      25,
+      27
     ],
     "suggested": {
       "picked": [
@@ -771,19 +773,23 @@
       ],
       "reserves": [
         17,
-        29
+        29,
+        25,
+        27
       ]
     },
     "reasons": {
       "10": "on time: 7/8, 23/26, 39/52 (77%)",
-      "11": "owed: missed out 2 Nov 26 (priority 4 wks), 6/8, 17/26, 36/52 (71%)",
+      "11": "owed: priority given by John, 6/8, 17/26, 36/52 (71%)",
       "12": "on time: 8/8, 25/26, 51/52 (98%)",
       "15": "on time: 1/8, 7/26, 31/52 (47%)",
       "16": "on time: 8/8, 22/26, 45/52 (84%)",
       "17": "on time: 7/8, 19/26, 38/52 (68%)",
       "21": "on time: 4/8, 14/26, 26/52 (48%)",
       "22": "owed: missed out 9 Nov 26 (priority 4 wks), 6/8, 14/26, 32/52 (61%)",
+      "25": "on time: 1/8, 6/26, 13/52 (20%)",
       "26": "owed: missed out 9 Nov 26 (priority 4 wks), 6/8, 17/26, 39/52 (73%)",
+      "27": "on time: 7/8, 17/26, 35/52 (63%)",
       "28": "on time: 6/8, 6/26, 9/52 (21%)",
       "29": "on time: 5/8, 11/26, 19/52 (35%)",
       "34": "on time: 6/8, 11/26, 15/52 (34%)"
@@ -801,6 +807,8 @@
       "Tue 17 Nov, 08:24  + Michael Scott  [reply]",
       "Tue 17 Nov, 08:28  + John Harnwell  [reply]",
       "Tue 17 Nov, 08:48  + Alasdair Barnett  [reply]",
+      "Tue 17 Nov, 10:06  + Ruban  [reply]",
+      "Tue 17 Nov, 10:34  + Andy W  [reply]",
       "Tue 17 Nov, 09:37  + Rob Saunders  [manual]"
     ],
     "manual": [

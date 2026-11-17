@@ -831,8 +831,9 @@ async function runAll(mode, rowVals) {
 //   Reply by 18:00 on the day the list goes out (normally Tuesday). Everyone who
 //   replies by then is ranked: (1) missed out within their priority weeks, (2)
 //   everyone else, by reply time. Missed out = on the reserves line of the
-//   organiser's last list and didn't play. How long it keeps priority depends on
-//   attendance: see PICK.priorityWeeks. Top 10 play; the rest are reserves in
+//   organiser's last list and didn't play. Priority is used up by the next game
+//   played; how long an unused priority waits depends on attendance: see
+//   PICK.priorityWeeks. Top 10 play; the rest are reserves in
 //   order. Replies after the cut-off rank below every on-time reply. People who
 //   only offered to be a reserve go last. Attendance is a weighted rate over the
 //   last 104 sessions, each session counting half as much per 26 sessions of age
@@ -843,7 +844,7 @@ const PICK = {
   windows: [8, 26, 52],    // counts shown for info
   lookback: 104,           // sessions in the weighted rate
   halfLife: 26,            // a session's weight halves every 26 sessions
-  // Weeks of priority after being left out, by weighted attendance.
+  // Weeks an unused priority lasts after being left out, by weighted attendance.
   priorityWeeks: [[0.6, 4], [0.5, 3], [0.3, 2], [0, 1]],
   organiserEmail: 'thejgs@gmail.com',
   playerRows: [10, 40],
@@ -1161,6 +1162,9 @@ async function pick(mode, args) {
   const allCols = await sessionColumns(mode);
   const cols = allCols.filter(c => parseSheetDate(c.date) < parseSheetDate(sessionDate)).slice(0, PICK.lookback);
   const att = await attendance(mode, cols);
+  // Copy before missed-out weeks are counted as attended: used to tell whether a
+  // priority has been used up by playing.
+  const played = new Map([...att].map(([r, a]) => [r, [...a]]));
   // Missing out counts as attended, so a keen newcomer isn't stuck alternating
   // between owed and bumped.
   const ledger = loadLedger(mode);
@@ -1181,8 +1185,7 @@ async function pick(mode, args) {
   const thisCol = allCols.find(c => c.date === sessionDate);
   const actualRows = thisCol ? [...(await attendance(mode, [thisCol])).entries()].filter(([, v]) => v[0]).map(([r]) => r) : null;
 
-  // Owed: missed out within their priority weeks, whether or not they've played
-  // since.
+  // Owed: missed out within their priority weeks and haven't played since.
   const weekMs = 7 * 24 * 3600 * 1000;
   const owedFrom = new Map();  // row -> { date, weeks }
   Object.keys(ledger)
@@ -1192,8 +1195,10 @@ async function pick(mode, args) {
       const e = ledger[k];
       const leftOut = e.missedOut || [];
       const ago = Math.round((parseSheetDate(sessionDate) - parseSheetDate(k)) / weekMs);
+      const ik = cols.findIndex(c => c.date === k);
       leftOut.forEach(r => {
         if (owedFrom.has(r)) return;  // most recent left-out week wins
+        if (ik > 0 && (played.get(r) || []).slice(0, ik).some(Boolean)) return;  // used up
         const weeks = priorityWeeks(att.get(r) || []);
         if (ago <= weeks) owedFrom.set(r, { date: k, weeks });
       });

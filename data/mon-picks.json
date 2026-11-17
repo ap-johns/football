@@ -755,6 +755,7 @@
       34,
       17,
       29,
+      33,
       25,
       27
     ],
@@ -774,6 +775,7 @@
       "reserves": [
         17,
         29,
+        33,
         25,
         27
       ]
@@ -792,6 +794,7 @@
       "27": "on time: 7/8, 17/26, 35/52 (63%)",
       "28": "on time: 6/8, 6/26, 9/52 (21%)",
       "29": "on time: 5/8, 11/26, 19/52 (35%)",
+      "33": "on time: 5/8, 11/26, 15/52 (41%)",
       "34": "on time: 6/8, 11/26, 15/52 (34%)"
     },
     "guests": [],
@@ -809,13 +812,18 @@
       "Tue 17 Nov, 08:48  + Alasdair Barnett  [reply]",
       "Tue 17 Nov, 10:06  + Ruban  [reply]",
       "Tue 17 Nov, 10:34  + Andy W  [reply]",
-      "Tue 17 Nov, 09:37  + Rob Saunders  [manual]"
+      "Tue 17 Nov, 09:37  + Rob Saunders  [manual]",
+      "Tue 17 Nov, 08:28  + Luke Harnwell  [manual]"
     ],
     "manual": [
       {
         "row": 11,
         "at": "2026-11-17T09:37:37.028Z",
         "owed": true
+      },
+      {
+        "row": 33,
+        "at": "2026-11-17T08:28:51.000Z"
       }
     ]
   }

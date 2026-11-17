@@ -716,6 +716,11 @@
       10,
       16,
       27
+    ],
+    "missedOut": [
+      35,
+      22,
+      26
     ]
   },
   "16 Nov 26": {
@@ -731,6 +736,79 @@
       25,
       18
     ],
-    "thread": "1a1c485bf8690f66"
+    "thread": "1a1c485bf8690f66",
+    "missedOut": []
+  },
+  "23 Nov 26": {
+    "thread": "1a1e8875e717f36f",
+    "cutoff": "2026-11-17T18:00:00.000Z",
+    "signups": [
+      26,
+      22,
+      11,
+      12,
+      21,
+      28,
+      16,
+      10,
+      15,
+      34,
+      17,
+      29
+    ],
+    "suggested": {
+      "picked": [
+        26,
+        22,
+        11,
+        12,
+        21,
+        28,
+        16,
+        10,
+        15,
+        34
+      ],
+      "reserves": [
+        17,
+        29
+      ]
+    },
+    "reasons": {
+      "10": "on time: 7/8, 23/26, 39/52 (77%)",
+      "11": "owed: missed out 2 Nov 26 (priority 4 wks), 6/8, 17/26, 36/52 (71%)",
+      "12": "on time: 8/8, 25/26, 51/52 (98%)",
+      "15": "on time: 1/8, 7/26, 31/52 (47%)",
+      "16": "on time: 8/8, 22/26, 45/52 (84%)",
+      "17": "on time: 7/8, 19/26, 38/52 (68%)",
+      "21": "on time: 4/8, 14/26, 26/52 (48%)",
+      "22": "owed: missed out 9 Nov 26 (priority 4 wks), 6/8, 14/26, 32/52 (61%)",
+      "26": "owed: missed out 9 Nov 26 (priority 4 wks), 6/8, 17/26, 39/52 (73%)",
+      "28": "on time: 6/8, 6/26, 9/52 (21%)",
+      "29": "on time: 5/8, 11/26, 19/52 (35%)",
+      "34": "on time: 6/8, 11/26, 15/52 (34%)"
+    },
+    "guests": [],
+    "log": [
+      "Tue 17 Nov, 08:02  + John Stirling  [organiser]",
+      "Tue 17 Nov, 08:03  + Alex L  [reply]",
+      "Tue 17 Nov, 08:03  + Fin Miller  [reply]",
+      "Tue 17 Nov, 08:09  + Richard Dexter  [reply]",
+      "Tue 17 Nov, 08:11  + Andy Rutter  [reply]",
+      "Tue 17 Nov, 08:15  + Mark Sutton  [reply]",
+      "Tue 17 Nov, 08:18  + Greg Rudd  [reply]",
+      "Tue 17 Nov, 08:19  + Steve Hughes  [reply]",
+      "Tue 17 Nov, 08:24  + Michael Scott  [reply]",
+      "Tue 17 Nov, 08:28  + John Harnwell  [reply]",
+      "Tue 17 Nov, 08:48  + Alasdair Barnett  [reply]",
+      "Tue 17 Nov, 09:37  + Rob Saunders  [manual]"
+    ],
+    "manual": [
+      {
+        "row": 11,
+        "at": "2026-11-17T09:37:37.028Z",
+        "owed": true
+      }
+    ]
   }
 }

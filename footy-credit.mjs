@@ -1169,6 +1169,14 @@ async function pick(mode, args) {
     const a = att.get(r);
     if (a) a[i] = 1;
   }));
+  // Sign-ups John made outside the thread: ledger[session].manual = [{ row, at, owed }].
+  const manual = ledger[sessionDate]?.manual || [];
+  manual.forEach(m => {
+    const cur = signups.get(m.row);
+    if (cur && !cur.dropped) return;
+    signups.set(m.row, { at: new Date(m.at), via: 'manual', reserveOnly: false, dropped: false });
+    notes.push(`${fmtTime(new Date(m.at))}  + ${byRow.get(m.row)?.name || m.row}  [manual]`);
+  });
   // If this session is already on the sheet (backfill), take the actual 10 from it.
   const thisCol = allCols.find(c => c.date === sessionDate);
   const actualRows = thisCol ? [...(await attendance(mode, [thisCol])).entries()].filter(([, v]) => v[0]).map(([r]) => r) : null;
@@ -1190,6 +1198,7 @@ async function pick(mode, args) {
         if (ago <= weeks) owedFrom.set(r, { date: k, weeks });
       });
     });
+  manual.filter(m => m.owed && !owedFrom.has(m.row)).forEach(m => owedFrom.set(m.row, { manual: true }));
 
   const entries = [...signups.entries()].filter(([, s]) => !s.dropped).map(([row, s]) => {
     const p = byRow.get(row);
@@ -1198,7 +1207,8 @@ async function pick(mode, args) {
     const late = s.at > cutoff;
     const tier = s.reserveOnly ? 4 : owed ? 1 : 2;
     const reason = s.reserveOnly ? 'offered reserve only'
-      : (owed ? `missed out ${owed.date} (priority ${owed.weeks} wk${owed.weeks > 1 ? 's' : ''}), ` : '') + text;
+      : (owed?.manual ? 'priority given by John, '
+        : owed ? `missed out ${owed.date} (priority ${owed.weeks} wk${owed.weeks > 1 ? 's' : ''}), ` : '') + text;
     return { row, p, s, tier, late, reason };
   });
   entries.sort((a, b) =>

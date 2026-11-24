@@ -38,7 +38,9 @@ Otherwise:
 
 The rule being trialled: reply by 18:00 on the day the list goes out (Tuesday).
 On-time replies rank (1) missed out within their priority weeks, (2) everyone else
-by reply time. Missed out = on the reserves line of John's last list in that week's
+by reply time, with head starts: 1 hour for regulars (weighted attendance 60%+) and
+1 hour for anyone who missed out within their priority weeks but has already used
+the priority (they add up, so 2 hours at most). Missed out = on the reserves line of John's last list in that week's
 thread and didn't play. The priority is used up by the next game played; unused,
 it lasts 1-4 weeks depending on weighted attendance: 60%+ 4 weeks, 50%+ 3, 30%+ 2,
 otherwise 1.

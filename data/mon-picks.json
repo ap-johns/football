@@ -837,6 +837,80 @@
       29,
       10,
       16
+    ],
+    "missedOut": [
+      33,
+      25,
+      27
+    ]
+  },
+  "30 Nov 26": {
+    "thread": "1a20c8f7a8c22907",
+    "cutoff": "2026-11-24T18:00:00.000Z",
+    "signups": [
+      22,
+      27,
+      33,
+      11,
+      12,
+      17,
+      10,
+      16,
+      26,
+      21,
+      15,
+      18,
+      34
+    ],
+    "suggested": {
+      "picked": [
+        22,
+        27,
+        33,
+        11,
+        12,
+        17,
+        10,
+        16,
+        26,
+        21
+      ],
+      "reserves": [
+        15,
+        18,
+        34
+      ]
+    },
+    "reasons": {
+      "10": "on time: head start 1h (regular) → 07:00, 7/8, 23/26, 39/52 (77%)",
+      "11": "on time: head start 2h (regular + missed out 2 Nov 26) → 06:04, 7/8, 17/26, 37/52 (71%)",
+      "12": "on time: head start 1h (regular) → 06:57, 8/8, 25/26, 51/52 (98%)",
+      "15": "on time: 2/8, 7/26, 31/52 (48%)",
+      "16": "on time: head start 1h (regular) → 07:10, 8/8, 22/26, 45/52 (84%)",
+      "17": "on time: head start 1h (regular) → 06:58, 7/8, 19/26, 38/52 (69%)",
+      "18": "on time: 3/8, 8/26, 16/52 (37%)",
+      "21": "on time: 3/8, 14/26, 26/52 (47%)",
+      "22": "owed: missed out 9 Nov 26 (priority 3 wks), 6/8, 13/26, 31/52 (59%)",
+      "26": "on time: head start 2h (regular + missed out 9 Nov 26) → 07:28, 6/8, 17/26, 39/52 (74%)",
+      "27": "owed: missed out 23 Nov 26 (priority 4 wks), 7/8, 18/26, 36/52 (64%)",
+      "33": "owed: missed out 23 Nov 26 (priority 2 wks), 5/8, 12/26, 16/52 (42%)",
+      "34": "on time: 5/8, 11/26, 14/52 (33%)"
+    },
+    "guests": [],
+    "log": [
+      "Tue 24 Nov, 07:57  + John Stirling  [organiser]",
+      "Tue 24 Nov, 07:58  + Michael Scott  [reply]",
+      "Tue 24 Nov, 08:00  + Andy Rutter  [reply]",
+      "Tue 24 Nov, 08:04  + Alex L  [reply]",
+      "Tue 24 Nov, 08:04  + Rob Saunders  [reply]",
+      "Tue 24 Nov, 08:05  + Alasdair Barnett  [reply]",
+      "Tue 24 Nov, 08:10  + Richard Dexter  [reply]",
+      "Tue 24 Nov, 08:17  + Mark Sutton  [reply]",
+      "Tue 24 Nov, 08:27  + Andy W  [reply]",
+      "Tue 24 Nov, 08:42  + Eugene  [reply]",
+      "Tue 24 Nov, 08:54  + Greg Rudd  [reply]",
+      "Tue 24 Nov, 08:56  + Luke Harnwell  [reply]",
+      "Tue 24 Nov, 09:28  + Steve Hughes  [reply]"
     ]
   }
 }

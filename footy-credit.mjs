@@ -835,7 +835,10 @@ async function runAll(mode, rowVals) {
 //   played; how long an unused priority waits depends on attendance: see
 //   PICK.priorityWeeks. Top 10 play; the rest are reserves in
 //   order. Replies after the cut-off rank below every on-time reply. People who
-//   only offered to be a reserve go last. Attendance is a weighted rate over the
+//   only offered to be a reserve go last. Among on-time replies that aren't owed,
+//   regulars and anyone who missed out within their priority weeks (priority
+//   already used) get a head start on reply time: see PICK.regularHeadStart and
+//   PICK.missedHeadStart. Attendance is a weighted rate over the
 //   last 104 sessions, each session counting half as much per 26 sessions of age
 //   (missing out counts as attended). Counts over 8, 26 and 52 are shown for info.
 
@@ -846,6 +849,9 @@ const PICK = {
   halfLife: 26,            // a session's weight halves every 26 sessions
   // Weeks an unused priority lasts after being left out, by weighted attendance.
   priorityWeeks: [[0.6, 4], [0.5, 3], [0.3, 2], [0, 1]],
+  // Head starts on reply time (minutes) for on-time replies that aren't owed.
+  regularHeadStart: { minRate: 0.6, minutes: 60 },
+  missedHeadStart: 60,     // missed out within priority weeks, priority already used
   organiserEmail: 'thejgs@gmail.com',
   playerRows: [10, 40],
 };
@@ -1188,6 +1194,7 @@ async function pick(mode, args) {
   // Owed: missed out within their priority weeks and haven't played since.
   const weekMs = 7 * 24 * 3600 * 1000;
   const owedFrom = new Map();  // row -> { date, weeks }
+  const usedFrom = new Map();  // same, but priority already used by playing
   Object.keys(ledger)
     .filter(k => parseSheetDate(k) && parseSheetDate(k) < parseSheetDate(sessionDate))
     .sort((a, b) => parseSheetDate(b) - parseSheetDate(a))
@@ -1197,10 +1204,11 @@ async function pick(mode, args) {
       const ago = Math.round((parseSheetDate(sessionDate) - parseSheetDate(k)) / weekMs);
       const ik = cols.findIndex(c => c.date === k);
       leftOut.forEach(r => {
-        if (owedFrom.has(r)) return;  // most recent left-out week wins
-        if (ik > 0 && (played.get(r) || []).slice(0, ik).some(Boolean)) return;  // used up
+        if (owedFrom.has(r) || usedFrom.has(r)) return;  // most recent left-out week wins
         const weeks = priorityWeeks(att.get(r) || []);
-        if (ago <= weeks) owedFrom.set(r, { date: k, weeks });
+        if (ago > weeks) return;
+        const used = ik > 0 && (played.get(r) || []).slice(0, ik).some(Boolean);
+        (used ? usedFrom : owedFrom).set(r, { date: k, weeks });
       });
     });
   manual.filter(m => m.owed && !owedFrom.has(m.row)).forEach(m => owedFrom.set(m.row, { manual: true }));
@@ -1211,14 +1219,26 @@ async function pick(mode, args) {
     const owed = owedFrom.get(row);
     const late = s.at > cutoff;
     const tier = s.reserveOnly ? 4 : owed ? 1 : 2;
+    // Head start for on-time, not-owed replies.
+    const why = [];
+    let head = 0;
+    if (tier === 2 && !late) {
+      if (attendanceRate(att.get(row) || []) >= PICK.regularHeadStart.minRate) {
+        head += PICK.regularHeadStart.minutes; why.push('regular');
+      }
+      const used = usedFrom.get(row);
+      if (used) { head += PICK.missedHeadStart; why.push(`missed out ${used.date}`); }
+    }
+    const rankAt = new Date(s.at - head * 60000);
     const reason = s.reserveOnly ? 'offered reserve only'
       : (owed?.manual ? 'priority given by John, '
-        : owed ? `missed out ${owed.date} (priority ${owed.weeks} wk${owed.weeks > 1 ? 's' : ''}), ` : '') + text;
-    return { row, p, s, tier, late, reason };
+        : owed ? `missed out ${owed.date} (priority ${owed.weeks} wk${owed.weeks > 1 ? 's' : ''}), ` : '')
+      + (head ? `head start ${head / 60}h (${why.join(' + ')}) → ${fmtTime(rankAt).split(', ')[1]}, ` : '') + text;
+    return { row, p, s, tier, late, reason, rankAt };
   });
   entries.sort((a, b) =>
     (a.s.reserveOnly - b.s.reserveOnly) || (a.late - b.late)
-    || (a.late ? 0 : (a.tier - b.tier)) || (a.s.at - b.s.at));
+    || (a.late ? 0 : (a.tier - b.tier)) || (a.late ? a.s.at - b.s.at : a.rankAt - b.rankAt));
 
   const picked = entries.slice(0, 10), reserves = entries.slice(10);
   const tierName = { 1: 'owed', 2: 'on time', 4: 'reserve-only' };

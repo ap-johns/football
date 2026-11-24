@@ -829,8 +829,10 @@ async function runAll(mode, rowVals) {
 //
 // Rule under trial (not published to the group):
 //   Reply by 18:00 on the day the list goes out (normally Tuesday). Everyone who
-//   replies by then is ranked: (1) missed out within their priority weeks, (2)
-//   everyone else, by reply time. Missed out = on the reserves line of the
+//   replies by then is ranked: (1) missed out within their priority weeks, last
+//   week's first, (2) everyone else, by reply time. The organiser is ranked like
+//   anyone else but listed first in the tally, with a flag if the rule leaves
+//   them out (their call). Missed out = on the reserves line of the
 //   organiser's last list and didn't play. Priority is used up by the next game
 //   played; how long an unused priority waits depends on attendance: see
 //   PICK.priorityWeeks. Top 10 play; the rest are reserves in
@@ -1208,7 +1210,7 @@ async function pick(mode, args) {
         const weeks = priorityWeeks(att.get(r) || []);
         if (ago > weeks) return;
         const used = ik > 0 && (played.get(r) || []).slice(0, ik).some(Boolean);
-        (used ? usedFrom : owedFrom).set(r, { date: k, weeks });
+        (used ? usedFrom : owedFrom).set(r, { date: k, weeks, ago });
       });
     });
   manual.filter(m => m.owed && !owedFrom.has(m.row)).forEach(m => owedFrom.set(m.row, { manual: true }));
@@ -1219,6 +1221,7 @@ async function pick(mode, args) {
     const owed = owedFrom.get(row);
     const late = s.at > cutoff;
     const tier = s.reserveOnly ? 4 : owed ? 1 : 2;
+    const lastWeek = owed?.ago === 1;
     // Head start for on-time, not-owed replies.
     const why = [];
     let head = 0;
@@ -1234,11 +1237,12 @@ async function pick(mode, args) {
       : (owed?.manual ? 'priority given by John, '
         : owed ? `missed out ${owed.date} (priority ${owed.weeks} wk${owed.weeks > 1 ? 's' : ''}), ` : '')
       + (head ? `head start ${head / 60}h (${why.join(' + ')}) → ${fmtTime(rankAt).split(', ')[1]}, ` : '') + text;
-    return { row, p, s, tier, late, reason, rankAt };
+    return { row, p, s, tier, late, lastWeek, reason, rankAt };
   });
   entries.sort((a, b) =>
     (a.s.reserveOnly - b.s.reserveOnly) || (a.late - b.late)
-    || (a.late ? 0 : (a.tier - b.tier)) || (a.late ? a.s.at - b.s.at : a.rankAt - b.rankAt));
+    || (a.late ? 0 : (a.tier - b.tier) || (b.lastWeek - a.lastWeek))
+    || (a.late ? a.s.at - b.s.at : a.rankAt - b.rankAt));
 
   const picked = entries.slice(0, 10), reserves = entries.slice(10);
   const tierName = { 1: 'owed', 2: 'on time', 4: 'reserve-only' };
@@ -1261,9 +1265,17 @@ async function pick(mode, args) {
     console.log('\nCould not interpret (check by eye):');
     unknown.forEach(u => console.log(`  ${u}`));
   }
+  // The organiser goes first in whichever line the rule puts them.
+  const isOrg = e => e.p.aliases?.includes(PICK.organiserEmail);
+  const orgFirst = list => [...list.filter(isOrg), ...list.filter(e => !isOrg(e))];
+  const org = entries.findIndex(isOrg);
+  if (org >= 10) {
+    console.log(`\nFLAG: under the rule the organiser (${entries[org].p.name}) is a reserve, rank ${org + 1}.`);
+    console.log(`  Your call: if you play, ${picked[9].p.name} drops to first reserve.`);
+  }
   console.log('\nTally to paste:');
-  console.log(`  ${picked.map(e => e.p.short).join(' ')}`);
-  if (reserves.length) console.log(`  reserves ${reserves.map(e => e.p.short).join(' ')}`);
+  console.log(`  ${orgFirst(picked).map(e => e.p.short).join(' ')}`);
+  if (reserves.length) console.log(`  reserves ${orgFirst(reserves).map(e => e.p.short).join(' ')}`);
   console.log(`\nAttendance window: ${cols.length} sessions (${cols[cols.length - 1]?.date} → ${cols[0]?.date})`);
   console.log(`\nAttendance bands (weighted over ${PICK.lookback} sessions, half-life ${PICK.halfLife}; left out counts as attended):`);
   const rated = players.map(p => ({ p, a: att.get(p.row) || [] })).filter(x => x.a.some(Boolean))

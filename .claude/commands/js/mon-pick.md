@@ -30,7 +30,10 @@ Otherwise:
 3. Show John:
    - the ranked sign-ups with tier, reason and attendance, and the 10 / 11 line,
    - the "Could not interpret" lines, so he can check them by eye,
-   - the "Tally to paste" lines,
+   - the "Tally to paste" lines (John is listed first in whichever line he's in;
+     that's display only, the rule ranks him like anyone else),
+   - any "FLAG" line saying the rule leaves John out. Make it prominent; whether
+     he plays anyway is his call,
    - the "Attendance bands" table, as a markdown table (band | players with
      last 8 / 26 / 52), plus the weeks of priority each band gets,
    - anyone under "Not on the sheet". If that person is really on the sheet, suggest the
@@ -39,8 +42,8 @@ Otherwise:
      wording John may one day attach to the sign-up email; not published yet.
 
 The rule being trialled: reply by 18:00 on the day the list goes out (Tuesday).
-On-time replies rank (1) missed out within their priority weeks, (2) everyone else
-by reply time, with head starts: 1 hour for regulars (weighted attendance 60%+) and
+On-time replies rank (1) missed out within their priority weeks, those who missed
+out last week first, (2) everyone else by reply time, with head starts: 1 hour for regulars (weighted attendance 60%+) and
 1 hour for anyone who missed out within their priority weeks but has already used
 the priority (they add up, so 2 hours at most). Missed out = on the reserves line of John's last list in that week's
 thread and didn't play. The priority is used up by the next game played; unused,
@@ -59,7 +62,7 @@ the regulars' head start, nothing else. Settings live in the `PICK` object in
 **How Monday places are picked**
 
 1. **Reply by 6pm on Tuesday**, the day the list goes out. Replies after that go to the back, in the order they arrive.
-2. **If you missed out, you get priority.** Missing out means you were a reserve on the final list and didn't play. Next time you reply on time, you go to the top. The priority is used up once you play. If you don't sign up straight away, it keeps for a while:
+2. **If you missed out, you get priority.** Missing out means you were a reserve on the final list and didn't play. Next time you reply on time, you go to the top, with last week's missed-outs ahead of earlier ones. The priority is used up once you play. If you don't sign up straight away, it keeps for a while:
    - 4 weeks if you play 60%+ of the time
    - 3 weeks at 50%+
    - 2 weeks at 30%+

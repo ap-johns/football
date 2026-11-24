@@ -34,7 +34,9 @@ Otherwise:
    - the "Attendance bands" table, as a markdown table (band | players with
      last 8 / 26 / 52), plus the weeks of priority each band gets,
    - anyone under "Not on the sheet". If that person is really on the sheet, suggest the
-     email or name alias to add to `players.mon.json`.
+     email or name alias to add to `players.mon.json`,
+   - at the end, the "Rules summary" below, verbatim, as a reminder. It's the
+     wording John may one day attach to the sign-up email; not published yet.
 
 The rule being trialled: reply by 18:00 on the day the list goes out (Tuesday).
 On-time replies rank (1) missed out within their priority weeks, (2) everyone else
@@ -48,5 +50,27 @@ The weighted rate covers the last 104 sessions, each counting half as much per 2
 sessions of age. Top 10 play, the rest are reserves. Late replies rank below all
 on-time replies, first come first served. People who only offered to be reserve go
 last. Each line shows the weighted rate plus counts over the last 8, 26 and 52
-sessions (missing out counts as attended); attendance only sets the priority weeks,
-not the order. Settings live in the `PICK` object in `footy-credit.mjs`.
+sessions (missing out counts as attended); attendance sets the priority weeks and
+the regulars' head start, nothing else. Settings live in the `PICK` object in
+`footy-credit.mjs`; if they change, update the summary below to match.
+
+## Rules summary
+
+**How Monday places are picked**
+
+1. **Reply by 6pm on Tuesday**, the day the list goes out. Replies after that go to the back, in the order they arrive.
+2. **If you missed out, you get priority.** Missing out means you were a reserve on the final list and didn't play. Next time you reply on time, you go to the top. The priority is used up once you play. If you don't sign up straight away, it keeps for a while:
+   - 4 weeks if you play 60%+ of the time
+   - 3 weeks at 50%+
+   - 2 weeks at 30%+
+   - otherwise 1 week
+3. **Everyone else is ranked by reply time, with head starts:**
+   - **Regulars** (60%+ attendance): your reply counts as 1 hour earlier.
+   - **Recently missed out:** if you've already used your priority but are still within your priority weeks, your reply counts as another hour earlier.
+   - The two add together, so the biggest head start is 2 hours.
+4. **The top 10 play.** The rest are reserves in order. If someone drops out, the next reserve takes the place.
+5. **If you only offer to be a reserve**, you go after everyone else.
+
+**Attendance** is the share of Mondays you've played over roughly the last two years, with recent weeks counting more. Weeks you missed out count as played, so being bumped never hurts your attendance.
+
+In unusual cases I may still make the call myself.
